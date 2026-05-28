@@ -376,7 +376,7 @@ def _tos_gauge(pct, value_str, unit_str, label_str, segments, tick_labels,
     tt = tooltip.replace("&","&amp;").replace("<","&lt;").replace(">","&gt;")
 
     return (
-        f'<div style="width:100%;min-height:148px;">'
+        f'<div style="max-width:190px;margin:0 auto;">'
         f'<svg viewBox="0 0 200 148" xmlns="http://www.w3.org/2000/svg" '
         f'width="200" height="148" style="width:100%;height:auto;display:block;" title="{tt}">'
         f'<rect width="200" height="148" fill="#151821" rx="6" '
@@ -552,33 +552,34 @@ def _freq_ruler(fof2_val, mufd_val, bands_list):
     return svg
 
 
+# Compute band conditions before layout split (needed for quick pick + ruler)
+bands = estimate_band_conditions(fof2, mufd, kp_val, sfi_val, xray_class=xray_data.get("class") if xray_data else None)
+
+# Best NVIS band quick pick — full width, above the fold
+_best_nvis = next(
+    (b for b in reversed(bands) if b["nvis_label"] in ("Excellent", "Good")), None
+)
+if _best_nvis:
+    _qp_col  = _best_nvis["nvis_color"]
+    _kp_note = (f" &nbsp;·&nbsp; Kp {kp_val:.1f} — watch absorption" if kp_val and kp_val >= 3 else "")
+    st.markdown(
+        f'<div style="font-family:Space Mono,monospace; background:#0a1a0e; '
+        f'border-left:3px solid {_qp_col}; border-radius:4px; '
+        f'padding:8px 14px; margin-bottom:6px; font-size:12px;">'
+        f'<span style="color:#3a8fbf; font-size:9px; letter-spacing:.1em">BEST NVIS / WINLINK BAND NOW</span><br>'
+        f'<span style="color:{_qp_col}; font-size:22px; font-weight:700">{_best_nvis["band"]}</span>'
+        f'<span style="color:#c8d3e0; margin-left:10px">{_best_nvis["nvis_label"]}</span>'
+        f'<span style="color:#5a6478; margin-left:10px; font-size:10px">NVIS ≈ 50–500 km{_kp_note}</span>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
+
 st.markdown("<div class='section-header'>Band Conditions — NVIS & DX · Freeland WA (CN88)</div>", unsafe_allow_html=True)
 
 col_bands, col_chart = st.columns([1, 2])
 
 # Band conditions table — NVIS and DX grades
 with col_bands:
-    bands = estimate_band_conditions(fof2, mufd, kp_val, sfi_val, xray_class=xray_data.get("class") if xray_data else None)
-
-    # Best NVIS band for Winlink quick pick
-    _best_nvis = next(
-        (b for b in reversed(bands) if b["nvis_label"] in ("Excellent", "Good")), None
-    )
-    if _best_nvis:
-        _qp_col = _best_nvis["nvis_color"]
-        _kp_note = (f" · Kp {kp_val:.1f} — check absorption" if kp_val and kp_val >= 3 else "")
-        st.markdown(
-            f'<div style="font-family:Space Mono,monospace; background:#0a1a0e; '
-            f'border-left:3px solid {_qp_col}; border-radius:4px; '
-            f'padding:7px 11px; margin-bottom:8px; font-size:12px;">'
-            f'<span style="color:#3a8fbf; font-size:9px; letter-spacing:.1em">BEST NVIS / WINLINK BAND NOW</span><br>'
-            f'<span style="color:{_qp_col}; font-size:20px; font-weight:700">{_best_nvis["band"]}</span>'
-            f'<span style="color:#c8d3e0; margin-left:8px">{_best_nvis["nvis_label"]}</span>'
-            f'<span style="color:#5a6478; margin-left:8px; font-size:10px">NVIS ≈ 50–500 km{_kp_note}</span>'
-            f'</div>',
-            unsafe_allow_html=True,
-        )
-
     # Frequency ruler
     st.markdown(_freq_ruler(fof2, mufd, bands), unsafe_allow_html=True)
 
