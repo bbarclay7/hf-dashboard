@@ -257,7 +257,7 @@ with c2:
 
 with c3:
     st.markdown(f"""
-    <div class="metric-card" title="DX multiplier — ratio of MUF(3000) to foF2. The oblique path geometry lets you use M(D) times higher frequency for DX than for straight-up NVIS. M(D) ~ 3 is normal; higher is better DX geometry. MUF = foF2 x M(D). Not a frequency floor — it is a geometry factor.">
+    <div class="metric-card" title="DX multiplier — ratio of MUF(3000) to foF2. The oblique path geometry lets you use M(D) times higher frequency for DX than for straight-up NVIS. M(D) ~ 3 is normal; higher is better DX geometry. MUF = foF2 x M(D).">
       <div class="metric-label">M(D) — DX Multiplier</div>
       <div class="metric-value">{fmt(md)}<span class="metric-unit"></span></div>
       <div class="metric-time">MUF = foF2 &times; M(D)</div>
@@ -277,8 +277,7 @@ collapses at night. Driven by solar UV ionizing the upper atmosphere.</p>
 <p><b>MUF(3000)</b> — Maximum Usable Frequency for a ~3000 km path. The highest frequency that
 bounces off F2 at the shallow angle needed for a one-hop ~1800 mi skip. <b>DX ceiling.</b>
 MUF = foF2 × M(D). Higher MUF = more bands open for long-haul DX.</p>
-<p><b>M(D)</b> — Propagation multiplier (MUF ÷ foF2). Typical value ~2.8–3.2.
-<b>Not a floor — it is a geometry factor.</b> MUF = foF2 × M(D).</p>
+<p><b>M(D)</b> — Propagation multiplier (MUF ÷ foF2). Typical value ~2.8–3.2. MUF = foF2 × M(D).</p>
 <p><em>Data from <a href="https://giro.uml.edu" target="_blank" style="color:#3a8fbf">GIRO DIDBase</a>,
 station IF843 (Idaho National Lab, 112.7°W), solar-offset −40 min for CN88.</em></p>
 </div></details>
