@@ -40,10 +40,9 @@ st.set_page_config(
 # ──────────────────────────────────────────────────────────────
 
 st.markdown("""
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
 <style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@300;400;600&display=swap');
+
   /* Dark terminal aesthetic */
   .stApp { background-color: #0d0f14; color: #c8d3e0; }
   
@@ -116,7 +115,7 @@ st.markdown("""
 
 with st.sidebar:
     st.markdown(f"## 📡 HF Dashboard")
-    st.markdown("**AK6MJ** · CN87 · Freeland WA")
+    st.markdown("**AK6MJ** · CN88 · Freeland WA")
     st.markdown("---")
 
     station = st.selectbox(
@@ -329,7 +328,7 @@ with c8:
 # ROW 3: Band conditions + foF2 trend
 # ──────────────────────────────────────────────────────────────
 
-st.markdown("<div class='section-header'>Band Conditions — NVIS & DX · Freeland WA (CN87)</div>", unsafe_allow_html=True)
+st.markdown("<div class='section-header'>Band Conditions — NVIS & DX · Freeland WA (CN88)</div>", unsafe_allow_html=True)
 
 col_bands, col_chart = st.columns([1, 2])
 
@@ -505,7 +504,7 @@ with col_raw:
 st.markdown("---")
 st.markdown(
     f"<div style='font-size:10px; color:#3a4458; font-family: Space Mono, monospace;'>"
-    f"AK6MJ · Freeland WA CN87 · HF Dashboard · "
+    f"AK6MJ · Freeland WA CN88 · HF Dashboard · "
     f"GIRO DIDBase (CC-BY-NC-SA 4.0) · NOAA SWPC · IF843 −40 min solar offset · "
     f"Generated {utc_now.strftime('%Y-%m-%dT%H:%MZ')}"
     f"</div>",

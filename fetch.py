@@ -28,7 +28,7 @@ GIRO_URL = "https://lgdc.uml.edu/common/DIDBGetValues"
 
 def fetch_ionosonde(
     station: str = "IF843",
-    chars: str = "foF2,MUFD,MD,D",
+    chars: str = "foF2,MD,MUFD,D",
     hours_back: float = 2.0,
     solar_offset_min: int = 40,
 ) -> Optional[dict]:
@@ -69,7 +69,7 @@ def fetch_ionosonde(
 
 def fetch_ionosonde_history(
     station: str = "IF843",
-    chars: str = "foF2,MUFD,MD,D",
+    chars: str = "foF2,MD,MUFD,D",
     hours_back: float = 24.0,
     solar_offset_min: int = 40,
 ) -> list[dict]:
@@ -148,9 +148,13 @@ def _parse_giro_text_all(text: str, chars: str) -> list[dict]:
             if "T" not in ts_str and len(parts) > 1:
                 # Maybe date + time are separate tokens
                 ts_str = parts[0] + "T" + parts[1] + "+00:00"
-                value_parts = parts[2:]
+                raw_values = parts[2:]
             else:
-                value_parts = parts[1:]
+                raw_values = parts[1:]
+
+            # GIRO format: CS(confidence) val1 // val2 // val3 // val4 flags
+            # Skip parts[1] (CS confidence score), strip '//' quality delimiters
+            value_parts = [p for p in raw_values[1:] if p != '//']
 
             ts = datetime.fromisoformat(ts_str)
             row = {"time": ts}
