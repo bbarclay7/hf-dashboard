@@ -541,7 +541,7 @@ if _best_nvis:
         f'<div style="font-family:Space Mono,monospace; background:#0a1a0e; '
         f'border-left:3px solid {_qp_col}; border-radius:4px; '
         f'padding:8px 14px; margin-bottom:6px; font-size:12px;">'
-        f'<span style="color:#3a8fbf; font-size:9px; letter-spacing:.1em">BEST NVIS / WINLINK BAND NOW</span><br>'
+        f'<span style="color:#3a8fbf; font-size:9px; letter-spacing:.1em">best nvis / varahf band now</span><br>'
         f'<span style="color:{_qp_col}; font-size:22px; font-weight:700">{_best_nvis["band"]}</span>'
         f'<span style="color:#c8d3e0; margin-left:10px">{_best_nvis["nvis_label"]}</span>'
         f'<span style="color:#5a6478; margin-left:10px; font-size:10px">NVIS ≈ 50–500 km{_kp_note}</span>'
