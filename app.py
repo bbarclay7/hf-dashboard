@@ -271,6 +271,31 @@ with c4:
       <div class="metric-time">at 3000 km</div>
     </div>""", unsafe_allow_html=True)
 
+with st.expander("ⓘ Ionospheric parameters explained"):
+    st.markdown("""
+**foF2** — F2 critical frequency. The highest frequency reflected straight up by the F2 layer.
+Acts as the **NVIS ceiling**: bands above foF2 punch through — no near-vertical reflection.
+Higher foF2 = more bands open for regional (0–500 km) contacts. Peaks near local solar noon,
+collapses at night. Driven by solar UV ionizing the upper atmosphere.
+
+**MUF(3000)** — Maximum Usable Frequency for a ~3000 km path. The highest frequency that
+bounces off F2 at the shallow angle needed for a one-hop ~1800 mi skip. **DX ceiling.**
+MUF = foF2 × M(D). Higher MUF = more bands open for long-haul DX. Falls when foF2 drops
+or the propagation geometry weakens.
+
+**M(D)** — Propagation multiplier (MUF ÷ foF2). Oblique geometry lets you use M(D)× higher
+frequency for DX than for straight-up NVIS. Typical value ~2.8–3.2. **Not a floor —
+it is a geometry factor.** Higher M(D) = better DX conditions relative to foF2.
+Formula: MUF = foF2 × M(D).
+
+**D** — Virtual height of the F2 reflection point (km). Calculated as if the signal traveled
+at light speed the whole way (actual height is lower due to slowing in the ionosphere).
+Typically 250–400 km. Not reported by station IF843 — always blank here.
+
+*Data from [GIRO DIDBase](https://giro.uml.edu), station IF843 (Idaho National Lab, 112.7°W),
+solar-offset −40 min for CN88 local solar conditions.*
+""")
+
 
 # ──────────────────────────────────────────────────────────────
 # ROW 2: Space weather metrics
@@ -322,6 +347,39 @@ with c8:
       <div class="metric-value" style="color:{xray_color}">{xray_cls or "—"}<span class="metric-unit">class</span></div>
       <div class="metric-time">{f"{xray_flux:.1e}" if xray_flux else ""} W/m²</div>
     </div>""", unsafe_allow_html=True)
+
+with st.expander("ⓘ Space weather parameters explained"):
+    st.markdown("""
+**Kp** — Planetary K-index (0–9 scale, 3-hour intervals). Measures global geomagnetic
+disturbance driven by solar wind hitting Earth's magnetosphere.
+- Kp 0–2: quiet — best HF conditions
+- Kp 3–4: unsettled — some degradation on higher bands
+- Kp 5+: geomagnetic storm — severe HF disruption, especially at high latitudes
+  like CN88 (auroral absorption, polar cap absorption)
+
+Kp penalizes band grades in this dashboard, with extra penalty above 14 MHz at CN88 latitude.
+[NOAA SWPC Kp](https://www.swpc.noaa.gov/products/planetary-k-index)
+
+**SFI** — Solar Flux Index (F10.7 cm). Daily measure of solar radio emissions, a proxy for
+ionizing UV output. The primary long-term driver of foF2 and MUF.
+- SFI ~70: solar minimum — low MUF, fewer bands open
+- SFI 150+: solar maximum — excellent worldwide DX
+- Rule of thumb: each +10 sfu adds roughly 0.5–1 MHz to foF2 and 2–3 MHz to MUF
+[NOAA SWPC F10.7](https://www.swpc.noaa.gov/phenomena/f107-cm-radio-emissions)
+
+**Bz** — Z-component of the interplanetary magnetic field, measured by DSCOVR ~1.5M km
+upstream (~1 hr warning). **Bz negative (southward)** = field couples into Earth's
+magnetosphere, driving geomagnetic storms. Bz < −5 nT sustained → watch for Kp rise over
+the next 1–3 hours. Speed > 500 km/s = fast solar wind, elevated storm risk.
+
+**X-ray** — GOES X-ray flux from solar flares. Flares cause **sudden ionospheric disturbances
+(SID)**: D-region absorbs HF on the sunlit side within minutes of the flare.
+- A / B: background, no effect
+- C: minor, slight absorption on 10/15m
+- M: moderate — 1–2 grade penalty on high bands
+- X: major — possible HF blackout on daytime hemisphere
+[NOAA SWPC flares](https://www.swpc.noaa.gov/phenomena/solar-flares-radio-blackouts)
+""")
 
 
 # ──────────────────────────────────────────────────────────────
@@ -398,6 +456,29 @@ with col_bands:
         muf_str=f"{mufd:.1f}" if mufd else "—",
     )
     st.html(band_md)
+
+    with st.expander("ⓘ How to read band conditions"):
+        st.markdown("""
+**NVIS (Near-Vertical Incidence Skywave)** — Regional contacts 0–500 km.
+Signal goes nearly straight up, reflects off F2, returns nearby.
+- *Ceiling*: foF2. Bands above foF2 punch through — no NVIS.
+- *Floor*: ~2 MHz daytime (D-region absorption), ~1 MHz at night.
+- Best bands: 80m, 60m, 40m (daytime); 160m at night.
+
+**DX (F2 Skip)** — Long-distance via oblique F2 reflection.
+- *Ceiling*: MUF(3000) for a 3000 km path. Above this, waves escape.
+- *Skip distance*: Shown in the NOTE column. Higher % of MUF = longer skip.
+  40m at 38% MUF → skip ~150–3500 km. 20m at 76% MUF → skip ~1900–3500 km.
+- *Multi-hop*: Two hops ≈ ×2 distance, three hops ≈ ×3 (transoceanic).
+- Bands below foF2 can only support NVIS — the wave reflects before it can skip.
+
+**Grades**: Excellent → Good → Fair → Poor → Closed
+
+**Penalties applied**:
+- High Kp reduces grades (geomagnetic absorption), especially above 14 MHz at CN88 latitude
+- X-ray flares (C/M/X class) reduce grades via D-region absorption on daytime bands
+- Hover any row for the exact physics with live values.
+""")
 
 # foF2 & MUF history chart
 with col_chart:
