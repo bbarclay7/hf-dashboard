@@ -241,7 +241,7 @@ c1, c2, c3, c4 = st.columns(4)
 
 with c1:
     st.markdown(f"""
-    <div class="metric-card">
+    <div class="metric-card" title="NVIS ceiling — the highest frequency that reflects straight up off the F2 layer. Bands above foF2 punch through the ionosphere and cannot support NVIS. Higher foF2 = more bands open for near-vertical skywave. Driven by solar UV and time of day.">
       <div class="metric-label">foF2 — F2 Critical Freq</div>
       <div class="metric-value">{fmt(fof2)}<span class="metric-unit">MHz</span></div>
       <div class="metric-time">{iono_age}</div>
@@ -249,7 +249,7 @@ with c1:
 
 with c2:
     st.markdown(f"""
-    <div class="metric-card">
+    <div class="metric-card" title="DX ceiling for a ~3000 km one-hop path — highest frequency that reflects off F2 at the oblique angle needed for ~1800 mi skip. Bands above MUF escape to space. MUF = foF2 x M(D). Higher MUF = more bands open for long-distance DX.">
       <div class="metric-label">MUF(3000) — Max Usable</div>
       <div class="metric-value">{fmt(mufd)}<span class="metric-unit">MHz</span></div>
       <div class="metric-time">3000 km path</div>
@@ -257,15 +257,15 @@ with c2:
 
 with c3:
     st.markdown(f"""
-    <div class="metric-card">
-      <div class="metric-label">M(D) — MUF/foF2 Ratio</div>
+    <div class="metric-card" title="DX multiplier — ratio of MUF(3000) to foF2. The oblique path geometry lets you use M(D) times higher frequency for DX than for straight-up NVIS. M(D) ~ 3 is normal; higher is better DX geometry. MUF = foF2 x M(D). Not a frequency floor — it is a geometry factor.">
+      <div class="metric-label">M(D) — DX Multiplier</div>
       <div class="metric-value">{fmt(md)}<span class="metric-unit"></span></div>
-      <div class="metric-time">propagation factor</div>
+      <div class="metric-time">MUF = foF2 &times; M(D)</div>
     </div>""", unsafe_allow_html=True)
 
 with c4:
     st.markdown(f"""
-    <div class="metric-card">
+    <div class="metric-card" title="Virtual height — apparent height of the F2 reflection point, calculated as if the signal traveled at the speed of light the whole path (it slows down in the ionosphere, so actual height is less). Typically 250-400 km for F2. Not reported by IF843 station.">
       <div class="metric-label">D — Virtual Height</div>
       <div class="metric-value">{fmt(d_val, 0)}<span class="metric-unit">km</span></div>
       <div class="metric-time">at 3000 km</div>
@@ -290,7 +290,7 @@ c5, c6, c7, c8 = st.columns(4)
 kp_css = kp_color_class(kp_val)
 with c5:
     st.markdown(f"""
-    <div class="metric-card">
+    <div class="metric-card" title="Planetary K-index, 0-9 scale (3-hr intervals). Measures global geomagnetic disturbance driven by solar wind. Kp 0-2: quiet, best HF conditions. Kp 3-4: unsettled, some degradation on higher bands. Kp 5+: geomagnetic storm, severe HF disruption especially at high latitudes like CN88 (auroral absorption).">
       <div class="metric-label">Kp — Geomagnetic Index</div>
       <div class="metric-value {kp_css}">{fmt(kp_val, 1)}</div>
       <div class="metric-time">0=quiet · 5+=storm</div>
@@ -298,7 +298,7 @@ with c5:
 
 with c6:
     st.markdown(f"""
-    <div class="metric-card">
+    <div class="metric-card" title="Solar Flux Index (10.7 cm radio flux) — daily measure of solar ionizing UV output. Primary driver of F2 layer density, foF2, and MUF. SFI 70: solar minimum, low MUF. SFI 150+: solar maximum, excellent worldwide DX. Rough rule: each +10 sfu adds ~0.5-1 MHz to foF2 and ~2-3 MHz to MUF.">
       <div class="metric-label">SFI — Solar Flux (F10.7)</div>
       <div class="metric-value">{fmt(sfi_val, 0)}<span class="metric-unit">sfu</span></div>
       <div class="metric-time">70=low · 150=high</div>
@@ -307,7 +307,7 @@ with c6:
 with c7:
     bz_color = "#ef5350" if (wind_bz is not None and wind_bz < -5) else "#e8f0fa"
     st.markdown(f"""
-    <div class="metric-card">
+    <div class="metric-card" title="Solar wind measured by DSCOVR satellite at L1, ~1 hour upstream of Earth. Bz is the north-south component of the interplanetary magnetic field: Bz negative (southward) = field couples into Earth magnetosphere, geomagnetic storm develops over hours. Bz < -5 nT sustained = watch for rising Kp. Speed > 500 km/s = fast wind, elevated storm risk.">
       <div class="metric-label">Solar Wind Bz / Speed</div>
       <div class="metric-value" style="color:{bz_color}">{fmt(wind_bz)}<span class="metric-unit">nT</span></div>
       <div class="metric-time">{fmt(wind_spd, 0)} km/s · Bz- = storm risk</div>
@@ -317,7 +317,7 @@ xray_colors = {"A": "#607d8b", "B": "#00acc1", "C": "#ffc107", "M": "#ff7043", "
 xray_color = xray_colors.get(xray_cls, "#e8f0fa") if xray_cls else "#e8f0fa"
 with c8:
     st.markdown(f"""
-    <div class="metric-card">
+    <div class="metric-card" title="GOES X-ray flux from solar flares. Flares cause sudden ionospheric disturbances (SID): D-region absorbs HF on the sunlit side of Earth within minutes. Classes: A/B = background, no effect. C = minor, slight absorption on 10/15m. M = moderate, 1-2 grade penalty on high bands. X = major, possible HF blackout on daytime side.">
       <div class="metric-label">GOES X-ray Flux</div>
       <div class="metric-value" style="color:{xray_color}">{xray_cls or "—"}<span class="metric-unit">class</span></div>
       <div class="metric-time">{f"{xray_flux:.1e}" if xray_flux else ""} W/m²</div>
@@ -344,6 +344,7 @@ with col_bands:
       <th style='text-align:left; padding:4px 6px'>BAND</th>
       <th style='text-align:left; padding:4px 6px'>NVIS</th>
       <th style='text-align:left; padding:4px 6px'>DX</th>
+      <th style='text-align:left; padding:4px 6px; color:#3a4458'>NOTE</th>
     </tr>
     """
     for b in bands:
@@ -351,15 +352,30 @@ with col_bands:
         dx_color   = b["dx_color"]
         nvis_lbl   = b["nvis_label"]
         dx_lbl     = b["dx_label"]
+        freq       = b["freq_mhz"]
         # N/A bands get muted style
         nvis_style = f"color:{nvis_color}" if nvis_lbl not in ("N/A", "Unknown") else "color:#2a3040"
         dx_style   = f"color:{dx_color}"   if dx_lbl   not in ("N/A", "Unknown") else "color:#2a3040"
+        # Short note for the visible NOTE column
+        if mufd and fof2 and freq > fof2 and freq <= mufd * 1.05:
+            _md = mufd / fof2
+            _d_min = max(0, int(3000 * (freq / fof2 - 1) / (_md - 1))) if _md > 1 else 0
+            _pct = int(freq / mufd * 100)
+            short_note = f"~{_d_min:,}&ndash;3,500 km &middot; {_pct}% MUF"
+        elif mufd and freq > mufd * 1.05:
+            short_note = f"above MUF {mufd:.1f} MHz"
+        elif fof2 and freq <= fof2:
+            _pct = int(freq / fof2 * 100)
+            short_note = f"{_pct}% of foF2 {fof2:.1f} MHz"
+        else:
+            short_note = ""
         band_md += f"""
         <tr style='border-bottom:1px solid #151821; cursor:default'
             title='NVIS: {b["nvis_note"]} | DX: {b["dx_note"]}'>
           <td style='padding:5px 6px; color:#c8d3e0'>{b["band"]}</td>
           <td style='padding:5px 6px; {nvis_style}'>{nvis_lbl}</td>
           <td style='padding:5px 6px; {dx_style}'>{dx_lbl}</td>
+          <td style='padding:5px 6px; font-size:10px; color:#5a6478'>{short_note}</td>
         </tr>"""
     band_md += "</table>"
 

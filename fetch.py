@@ -198,20 +198,23 @@ def fetch_kp() -> Optional[dict]:
             kp_val = float(last[1]) if len(last) > 1 else None
             time_str = last[0]
         elif isinstance(last, dict):
-            kp_val = float(last.get("kp_index") or last.get("kp") or 0)
+            # Prefer estimated_kp (always a float); kp_index=0 is falsy so avoid `or` chain
+            _kp = last.get("estimated_kp") if last.get("estimated_kp") is not None else last.get("kp_index")
+            kp_val = float(_kp) if _kp is not None else None
             time_str = last.get("time_tag") or last.get("time")
         else:
             return None
 
-        # Build short history (last 24 points = 24 min at 1-min cadence)
+        # Build short history (last 96 points = 96 min at 1-min cadence)
         history = []
         for row in data[-96:]:
             if isinstance(row, list):
                 history.append({"time": row[0], "kp": float(row[1]) if row[1] is not None else None})
             elif isinstance(row, dict):
+                _kp = row.get("estimated_kp") if row.get("estimated_kp") is not None else row.get("kp_index", 0)
                 history.append({
                     "time": row.get("time_tag") or row.get("time"),
-                    "kp": float(row.get("kp_index") or row.get("kp") or 0),
+                    "kp": float(_kp) if _kp is not None else 0.0,
                 })
 
         return {"kp": kp_val, "time": time_str, "history": history}
