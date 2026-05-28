@@ -376,8 +376,9 @@ def _tos_gauge(pct, value_str, unit_str, label_str, segments, tick_labels,
     tt = tooltip.replace("&","&amp;").replace("<","&lt;").replace(">","&gt;")
 
     return (
+        f'<div style="width:100%;min-height:148px;">'
         f'<svg viewBox="0 0 200 148" xmlns="http://www.w3.org/2000/svg" '
-        f'style="width:100%;display:block;" title="{tt}">'
+        f'width="200" height="148" style="width:100%;height:auto;display:block;" title="{tt}">'
         f'<rect width="200" height="148" fill="#151821" rx="6" '
         f'stroke="#2a2f3e" stroke-width="1"/>'
         f'{bg}{segs}{ticks_svg}{ndl}'
@@ -389,6 +390,7 @@ def _tos_gauge(pct, value_str, unit_str, label_str, segments, tick_labels,
         f'<text x="{CX}" y="142" text-anchor="middle" font-family="Space Mono,monospace" '
         f'font-size="8" fill="#3a8fbf" letter-spacing="2">{label_str}</text>'
         f'</svg>'
+        f'</div>'
     )
 
 
@@ -396,37 +398,37 @@ c5, c6, c7, c8 = st.columns(4)
 
 _kp_color = "#00e676" if (kp_val or 0) < 3 else "#ffc107" if (kp_val or 0) < 5 else "#ef5350"
 with c5:
-    st.html(_tos_gauge(
+    st.markdown(_tos_gauge(
         pct=_kp_pct, value_str=fmt(kp_val, 1), unit_str="", label_str="KP INDEX",
         segments=[(0, 22, "#00e676"), (22, 55, "#ffc107"), (55, 100, "#ef5350")],
         tick_labels=[(0, "0"), (22, "2"), (55, "5"), (100, "9")],
         tooltip="Planetary K-index, 0-9 scale (3-hr). 0-2: quiet, best HF. 3-4: unsettled. 5+: storm, severe HF disruption at high latitudes like CN88.",
         value_color=_kp_color,
-    ))
+    ), unsafe_allow_html=True)
 
 with c6:
-    st.html(_tos_gauge(
+    st.markdown(_tos_gauge(
         pct=_sfi_pct, value_str=fmt(sfi_val, 0), unit_str="sfu", label_str="SOLAR FLUX",
         segments=[(0, 24, "#ef5350"), (24, 57, "#ffc107"), (57, 100, "#00e676")],
         tick_labels=[(0, "65"), (24, "100"), (57, "150"), (100, "220")],
         tooltip="Solar Flux Index (F10.7 cm). Primary driver of foF2 and MUF. 70=solar minimum, 150+=solar maximum. Each +10 sfu adds ~0.5-1 MHz to foF2.",
-    ))
+    ), unsafe_allow_html=True)
 
 with c7:
     _bz_color = "#ef5350" if (wind_bz is not None and wind_bz < -5) else "#e8f0fa"
     _spd_str  = f"{fmt(wind_spd, 0)} km/s" if wind_spd is not None else "— km/s"
-    st.html(_tos_gauge(
+    st.markdown(_tos_gauge(
         pct=_bz_pct, value_str=fmt(wind_bz), unit_str=f"nT  {_spd_str}", label_str="SOLAR WIND",
         segments=[(0, 43, "#ef5350"), (43, 71, "#ffc107"), (71, 100, "#00e676")],
         tick_labels=[(0, "-25"), (43, "-10"), (71, "0"), (100, "+10")],
         tooltip="Solar wind Bz from DSCOVR (~1 hr upstream). Bz negative = southward field couples to Earth magnetosphere, storm develops. Bz < -5 nT sustained: watch for rising Kp.",
         value_color=_bz_color,
-    ))
+    ), unsafe_allow_html=True)
 
 _xray_colors = {"A": "#607d8b", "B": "#00acc1", "C": "#ffc107", "M": "#ff7043", "X": "#ef5350"}
 _xr_vc = _xray_colors.get(xray_cls, "#e8f0fa") if xray_cls else "#e8f0fa"
 with c8:
-    st.html(_tos_gauge(
+    st.markdown(_tos_gauge(
         pct=_xr_pct, value_str=xray_cls or "—",
         unit_str=f"{xray_flux:.1e} W/m²" if xray_flux else "",
         label_str="X-RAY FLUX",
@@ -434,7 +436,7 @@ with c8:
         tick_labels=[(0, "A"), (40, "B"), (60, "C"), (80, "M"), (100, "X")],
         tooltip="GOES X-ray flux (log scale). A/B: background. C: minor absorption. M: moderate, 1-2 grade penalty. X: major, possible HF blackout on daytime side.",
         value_color=_xr_vc,
-    ))
+    ), unsafe_allow_html=True)
 
 with st.expander("ⓘ Space weather parameters explained"):
     st.markdown("""
@@ -474,6 +476,82 @@ the next 1–3 hours. Speed > 500 km/s = fast solar wind, elevated storm risk.
 # ROW 3: Band conditions + foF2 trend
 # ──────────────────────────────────────────────────────────────
 
+def _freq_ruler(fof2_val, mufd_val, bands_list):
+    """SVG frequency ruler showing NVIS/DX/closed zones across 1.8–30 MHz (log scale)."""
+    W, H = 340, 56
+    BAR_Y, BAR_H = 20, 13
+    F_MIN, F_MAX = 1.8, 30.0
+    LOG_MIN  = math.log10(F_MIN)
+    LOG_RNG  = math.log10(F_MAX) - LOG_MIN
+
+    def xp(f):
+        return (math.log10(max(F_MIN, min(F_MAX, float(f)))) - LOG_MIN) / LOG_RNG * W
+
+    x_fof2 = xp(fof2_val) if fof2_val else None
+    x_mufd = xp(mufd_val) if (mufd_val and mufd_val < F_MAX) else (W if mufd_val else None)
+
+    svg = (f'<svg viewBox="0 0 {W} {H}" xmlns="http://www.w3.org/2000/svg" '
+           f'width="{W}" height="{H}" style="width:100%;height:auto;display:block;">'
+           f'<rect width="{W}" height="{H}" fill="#0d0f14"/>'
+           f'<rect x="0" y="{BAR_Y}" width="{W}" height="{BAR_H}" fill="#111318" rx="2"/>')
+
+    # Colour zones
+    if x_fof2:
+        svg += f'<rect x="0" y="{BAR_Y}" width="{x_fof2:.1f}" height="{BAR_H}" fill="#1a3a1a" rx="2"/>'
+    if x_fof2 and x_mufd and x_mufd > x_fof2:
+        svg += (f'<rect x="{x_fof2:.1f}" y="{BAR_Y}" width="{x_mufd - x_fof2:.1f}" '
+                f'height="{BAR_H}" fill="#0f1e2e"/>')
+
+    # Zone labels
+    if x_fof2 and x_fof2 > 22:
+        svg += (f'<text x="{x_fof2/2:.1f}" y="{BAR_Y + BAR_H/2 + 1:.1f}" '
+                f'text-anchor="middle" dominant-baseline="middle" '
+                f'font-family="Space Mono,monospace" font-size="6" fill="#00e676" opacity="0.7">NVIS</text>')
+    if x_fof2 and x_mufd and (x_mufd - x_fof2) > 22:
+        svg += (f'<text x="{(x_fof2 + x_mufd)/2:.1f}" y="{BAR_Y + BAR_H/2 + 1:.1f}" '
+                f'text-anchor="middle" dominant-baseline="middle" '
+                f'font-family="Space Mono,monospace" font-size="6" fill="#3a8fbf" opacity="0.7">DX</text>')
+
+    # Band ticks
+    band_lkp = {b["band"]: b for b in (bands_list or [])}
+    TICKS = [("160m",1.9),("80m",3.75),("60m",5.35),("40m",7.15),
+             ("30m",10.12),("20m",14.175),("17m",18.1),("15m",21.2),
+             ("12m",24.94),("10m",28.85)]
+    for bname, fcenter in TICKS:
+        bx = xp(fcenter)
+        bi = band_lkp.get(bname, {})
+        if fof2_val and fcenter <= fof2_val:
+            tc = bi.get("nvis_color", "#5a6478")
+        elif mufd_val and fcenter <= mufd_val:
+            tc = bi.get("dx_color", "#5a6478")
+        else:
+            tc = "#2a3040"
+        label = bname.replace("m", "")
+        svg += (f'<line x1="{bx:.1f}" y1="{BAR_Y}" x2="{bx:.1f}" y2="{BAR_Y+BAR_H}" '
+                f'stroke="{tc}" stroke-width="1" opacity="0.6"/>'
+                f'<text x="{bx:.1f}" y="{BAR_Y+BAR_H+9}" text-anchor="middle" '
+                f'font-family="Space Mono,monospace" font-size="6.5" fill="{tc}">{label}</text>')
+
+    # foF2 marker
+    if x_fof2:
+        svg += (f'<line x1="{x_fof2:.1f}" y1="{BAR_Y-3}" x2="{x_fof2:.1f}" y2="{BAR_Y+BAR_H+2}" '
+                f'stroke="#e8f0fa" stroke-width="1.5"/>'
+                f'<text x="{x_fof2:.1f}" y="{BAR_Y-6}" text-anchor="middle" '
+                f'font-family="Space Mono,monospace" font-size="6.5" fill="#e8f0fa">'
+                f'foF2 {fof2_val:.1f}</text>')
+
+    # MUF marker
+    if x_mufd and mufd_val and mufd_val < F_MAX:
+        svg += (f'<line x1="{x_mufd:.1f}" y1="{BAR_Y-3}" x2="{x_mufd:.1f}" y2="{BAR_Y+BAR_H+2}" '
+                f'stroke="#3a8fbf" stroke-width="1.5"/>'
+                f'<text x="{x_mufd:.1f}" y="{BAR_Y-6}" text-anchor="middle" '
+                f'font-family="Space Mono,monospace" font-size="6.5" fill="#3a8fbf">'
+                f'MUF {mufd_val:.1f}</text>')
+
+    svg += '</svg>'
+    return svg
+
+
 st.markdown("<div class='section-header'>Band Conditions — NVIS & DX · Freeland WA (CN88)</div>", unsafe_allow_html=True)
 
 col_bands, col_chart = st.columns([1, 2])
@@ -481,6 +559,28 @@ col_bands, col_chart = st.columns([1, 2])
 # Band conditions table — NVIS and DX grades
 with col_bands:
     bands = estimate_band_conditions(fof2, mufd, kp_val, sfi_val, xray_class=xray_data.get("class") if xray_data else None)
+
+    # Best NVIS band for Winlink quick pick
+    _best_nvis = next(
+        (b for b in reversed(bands) if b["nvis_label"] in ("Excellent", "Good")), None
+    )
+    if _best_nvis:
+        _qp_col = _best_nvis["nvis_color"]
+        _kp_note = (f" · Kp {kp_val:.1f} — check absorption" if kp_val and kp_val >= 3 else "")
+        st.markdown(
+            f'<div style="font-family:Space Mono,monospace; background:#0a1a0e; '
+            f'border-left:3px solid {_qp_col}; border-radius:4px; '
+            f'padding:7px 11px; margin-bottom:8px; font-size:12px;">'
+            f'<span style="color:#3a8fbf; font-size:9px; letter-spacing:.1em">BEST NVIS / WINLINK BAND NOW</span><br>'
+            f'<span style="color:{_qp_col}; font-size:20px; font-weight:700">{_best_nvis["band"]}</span>'
+            f'<span style="color:#c8d3e0; margin-left:8px">{_best_nvis["nvis_label"]}</span>'
+            f'<span style="color:#5a6478; margin-left:8px; font-size:10px">NVIS ≈ 50–500 km{_kp_note}</span>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+
+    # Frequency ruler
+    st.markdown(_freq_ruler(fof2, mufd, bands), unsafe_allow_html=True)
 
     # Build styled HTML table
     band_md = """
@@ -515,10 +615,15 @@ with col_bands:
             short_note = f"{_pct}% of foF2 {fof2:.1f} MHz"
         else:
             short_note = ""
+        _is_best = _best_nvis and b["band"] == _best_nvis["band"]
+        _band_cell = (
+            f'{b["band"]} <span style="color:#00e676; font-size:9px">★</span>'
+            if _is_best else b["band"]
+        )
         band_md += f"""
         <tr style='border-bottom:1px solid #151821; cursor:default'
             title='NVIS: {b["nvis_note"]} | DX: {b["dx_note"]}'>
-          <td style='padding:5px 6px; color:#c8d3e0'>{b["band"]}</td>
+          <td style='padding:5px 6px; color:#c8d3e0'>{_band_cell}</td>
           <td style='padding:5px 6px; {nvis_style}'>{nvis_lbl}</td>
           <td style='padding:5px 6px; {dx_style}'>{dx_lbl}</td>
           <td style='padding:5px 6px; font-size:10px; color:#5a6478'>{short_note}</td>
