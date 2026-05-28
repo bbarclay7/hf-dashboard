@@ -12,6 +12,7 @@ import plotly.graph_objects as go
 import plotly.express as px
 from datetime import datetime, timezone
 import time
+import math
 
 from fetch import (
     fetch_ionosonde,
@@ -310,6 +311,19 @@ wind_bz  = wind_data.get("bz")   if wind_data else None
 xray_cls = xray_data.get("class") if xray_data else None
 xray_flux = xray_data.get("flux") if xray_data else None
 
+# Scale bar positions (0–100%) for gauge needles
+_kp_pct   = min(100, max(0, (kp_val  or 0) / 9 * 100))                                    if kp_val   is not None else None
+_sfi_pct  = min(100, max(0, ((sfi_val or 65) - 65) / 155 * 100))                          if sfi_val  is not None else None
+_bz_pct   = min(100, max(0, ((wind_bz or 0) + 25) / 35 * 100))                            if wind_bz  is not None else None
+_xr_pct   = min(100, max(0, (math.log10(max(xray_flux, 1e-9)) + 9) / 5 * 100))            if xray_flux else None
+
+def _needle(pct):
+    """White tick mark at position pct% on a scale bar."""
+    if pct is None:
+        return ""
+    return (f"<div style='position:absolute;top:-3px;left:calc({pct:.0f}% - 2px);"
+            f"width:4px;height:10px;background:#c8d3e0;border-radius:1px;'></div>")
+
 c5, c6, c7, c8 = st.columns(4)
 
 kp_css = kp_color_class(kp_val)
@@ -319,6 +333,13 @@ with c5:
       <div class="metric-label">Kp — Geomagnetic Index</div>
       <div class="metric-value {kp_css}">{fmt(kp_val, 1)}</div>
       <div class="metric-time">0=quiet · 5+=storm</div>
+      <div style='margin-top:8px;position:relative;height:4px;border-radius:2px;
+                  background:linear-gradient(to right,#00e676,#ffc107 44%,#ef5350 66%);'>
+        {_needle(_kp_pct)}
+      </div>
+      <div style='display:flex;justify-content:space-between;font-size:8px;color:#3a4458;margin-top:2px;'>
+        <span>0</span><span>3</span><span>5</span><span>9</span>
+      </div>
     </div>""", unsafe_allow_html=True)
 
 with c6:
@@ -327,6 +348,13 @@ with c6:
       <div class="metric-label">SFI — Solar Flux (F10.7)</div>
       <div class="metric-value">{fmt(sfi_val, 0)}<span class="metric-unit">sfu</span></div>
       <div class="metric-time">70=low · 150=high</div>
+      <div style='margin-top:8px;position:relative;height:4px;border-radius:2px;
+                  background:linear-gradient(to right,#ef5350,#ffc107 35%,#00e676 68%);'>
+        {_needle(_sfi_pct)}
+      </div>
+      <div style='display:flex;justify-content:space-between;font-size:8px;color:#3a4458;margin-top:2px;'>
+        <span>65</span><span>100</span><span>150</span><span>220</span>
+      </div>
     </div>""", unsafe_allow_html=True)
 
 with c7:
@@ -336,16 +364,32 @@ with c7:
       <div class="metric-label">Solar Wind Bz / Speed</div>
       <div class="metric-value" style="color:{bz_color}">{fmt(wind_bz)}<span class="metric-unit">nT</span></div>
       <div class="metric-time">{fmt(wind_spd, 0)} km/s · Bz- = storm risk</div>
+      <div style='margin-top:8px;position:relative;height:4px;border-radius:2px;
+                  background:linear-gradient(to right,#ef5350,#ffc107 43%,#00e676 71%);'>
+        {_needle(_bz_pct)}
+      </div>
+      <div style='position:relative;height:12px;font-size:8px;color:#3a4458;margin-top:2px;'>
+        <span style='position:absolute;left:0'>−25</span>
+        <span style='position:absolute;left:68%;transform:translateX(-50%)'>0</span>
+        <span style='position:absolute;right:0'>+10</span>
+      </div>
     </div>""", unsafe_allow_html=True)
 
 xray_colors = {"A": "#607d8b", "B": "#00acc1", "C": "#ffc107", "M": "#ff7043", "X": "#ef5350"}
 xray_color = xray_colors.get(xray_cls, "#e8f0fa") if xray_cls else "#e8f0fa"
 with c8:
     st.markdown(f"""
-    <div class="metric-card" title="GOES X-ray flux from solar flares. Flares cause sudden ionospheric disturbances (SID): D-region absorbs HF on the sunlit side of Earth within minutes. Classes: A/B = background, no effect. C = minor, slight absorption on 10/15m. M = moderate, 1-2 grade penalty on high bands. X = major, possible HF blackout on daytime side.">
+    <div class="metric-card" title="GOES X-ray flux from solar flares. Flares cause sudden ionospheric disturbances (SID): D-region absorbs HF on the sunlit side of Earth within minutes. Classes: A/B = background, no effect. C = minor, slight absorption on 10/15m. M = moderate, 1-2 grade penalty on high bands. X = major, possible HF blackout on daytime side. Scale is logarithmic.">
       <div class="metric-label">GOES X-ray Flux</div>
       <div class="metric-value" style="color:{xray_color}">{xray_cls or "—"}<span class="metric-unit">class</span></div>
       <div class="metric-time">{f"{xray_flux:.1e}" if xray_flux else ""} W/m²</div>
+      <div style='margin-top:8px;position:relative;height:4px;border-radius:2px;
+                  background:linear-gradient(to right,#607d8b,#00acc1 40%,#ffc107 60%,#ff7043 80%,#ef5350);'>
+        {_needle(_xr_pct)}
+      </div>
+      <div style='display:flex;justify-content:space-between;font-size:8px;color:#3a4458;margin-top:2px;'>
+        <span>A</span><span>B</span><span>C</span><span>M</span><span>X</span>
+      </div>
     </div>""", unsafe_allow_html=True)
 
 with st.expander("ⓘ Space weather parameters explained"):
