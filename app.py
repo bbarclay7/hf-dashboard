@@ -338,7 +338,7 @@ with col_bands:
 
     # Build styled HTML table
     band_md = """
-    <div style='font-family: Space Mono, monospace; font-size: 12px;'>
+    <div style='font-family: Space Mono, monospace; font-size: 12px; background:#0d0f14; color:#c8d3e0;'>
     <table style='width:100%; border-collapse:collapse;'>
     <tr style='color:#3a8fbf; font-size:10px; letter-spacing:0.08em; border-bottom:1px solid #2a2f3e;'>
       <th style='text-align:left; padding:4px 6px'>BAND</th>
@@ -381,7 +381,7 @@ with col_bands:
         fof2_str=f"{fof2:.2f}" if fof2 else "—",
         muf_str=f"{mufd:.1f}" if mufd else "—",
     )
-    st.markdown(band_md, unsafe_allow_html=True)
+    st.html(band_md)
 
 # foF2 & MUF history chart
 with col_chart:
