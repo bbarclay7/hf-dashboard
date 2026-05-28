@@ -436,19 +436,19 @@ def grade_nvis(freq: float, fof2: float, kp: Optional[float], xray_class: Option
             grade = 1  # Closed
         else:
             grade = 2  # Poor — barely above, some near-vertical may still reflect
-        note_parts.append(f"freq > foF2 ({fof2:.2f} MHz)")
+        note_parts.append(f"f={freq} MHz > foF2 {fof2:.2f} MHz — wave punches through F2, no NVIS return")
     elif freq > fof2 * 0.90:
         grade = 4   # Good — near critical, strong reflection
-        note_parts.append(f"near foF2 ceiling")
+        note_parts.append(f"f={freq} MHz near foF2 ceiling {fof2:.2f} MHz — strong near-vertical reflection")
     elif freq > fof2 * 0.60:
         grade = 5   # Excellent — well below foF2, robust reflection
-        note_parts.append(f"foF2={fof2:.2f} MHz")
+        note_parts.append(f"f={freq} MHz well below foF2 {fof2:.2f} MHz — robust F2 reflection, excellent NVIS")
     elif freq > fof2 * 0.35:
         grade = 4   # Good — lower frequency, some D-region absorption risk
-        note_parts.append(f"foF2={fof2:.2f} MHz, abs. risk")
+        note_parts.append(f"f={freq} MHz below foF2 {fof2:.2f} MHz — good NVIS, D-region absorption possible")
     else:
         grade = 3   # Fair — well below foF2, likely D-region absorbed (esp. 160m day)
-        note_parts.append(f"D-region absorption likely")
+        note_parts.append(f"f={freq} MHz — D-region absorption likely at this frequency")
 
     # Apply penalties
     penalty = _kp_penalty(kp) + _xray_penalty(xray_class)
@@ -477,33 +477,37 @@ def grade_dx(freq: float, fof2: float, muf3000: float,
     giving a sense of whether even regional DX (1000–2000 km) is available.
     """
     note_parts = []
-    muf_1000 = muf3000 * 0.72   # rough scaling for ~1000 km path (M factor lower)
 
     pct_of_muf = freq / muf3000  # 0..1+ where 1.0 = exactly at MUF
 
+    # Estimated one-hop skip range via linear M(D) interpolation
+    _md = muf3000 / fof2
+    _d_min = max(0, int(3000 * (freq / fof2 - 1) / (_md - 1))) if _md > 1 and freq > fof2 else 0
+    _d_max = 3500
+
     if freq > muf3000 * 1.05:
         grade = 1  # Closed — above MUF, no F2 return
-        note_parts.append(f"above MUF({muf3000:.1f} MHz)")
+        note_parts.append(f"f={freq} MHz > MUF {muf3000:.1f} MHz — no F2 skip on this band")
     elif freq > muf3000 * 0.95:
         grade = 4  # Good — right at MUF, low-angle strong path but unstable
-        note_parts.append(f"at MUF ({pct_of_muf*100:.0f}%)")
+        note_parts.append(f"f={freq} MHz at MUF {muf3000:.1f} MHz ({pct_of_muf*100:.0f}%) — low-angle path, skip ~{_d_max} km/hop")
     elif freq > muf3000 * 0.80:
         grade = 5  # Excellent — sweet spot
-        note_parts.append(f"{pct_of_muf*100:.0f}% of MUF({muf3000:.1f})")
+        note_parts.append(f"f={freq} MHz = {pct_of_muf*100:.0f}% of MUF {muf3000:.1f} MHz — skip ~{_d_min}–{_d_max} km/hop")
     elif freq > muf3000 * 0.55:
         grade = 4  # Good — open, longer skip zone
-        note_parts.append(f"{pct_of_muf*100:.0f}% of MUF, long skip")
+        note_parts.append(f"f={freq} MHz = {pct_of_muf*100:.0f}% of MUF {muf3000:.1f} MHz — skip ~{_d_min}–{_d_max} km/hop")
     elif freq > muf3000 * 0.35:
         grade = 3  # Fair — open but F2 may be sharing with other modes
-        note_parts.append(f"low % of MUF, multi-mode")
+        note_parts.append(f"f={freq} MHz = {pct_of_muf*100:.0f}% of MUF {muf3000:.1f} MHz — skip ~{_d_min}–{_d_max} km/hop (multi-mode)")
     elif freq > fof2:
         grade = 2  # Poor — above foF2 so some oblique path exists, but very low angle
-        note_parts.append(f"freq > foF2, short skip only")
+        note_parts.append(f"f={freq} MHz > foF2 {fof2:.2f} MHz — oblique path exists but skip ~{_d_min}–500 km only")
     else:
         grade = 2  # Poor — below foF2, NVIS dominates, no real DX
-        note_parts.append(f"below foF2, skip too short")
+        note_parts.append(f"f={freq} MHz < foF2 {fof2:.2f} MHz — wave reflects vertically, NVIS only, no DX skip")
 
-    # Apply penalties (Kp hits high bands harder at high latitudes like CN87)
+    # Apply penalties (Kp hits high bands harder at high latitudes like CN88)
     # Extra Kp penalty for high bands at high latitude (polar cap absorption)
     kp_pen = _kp_penalty(kp)
     if kp is not None and kp >= 4 and freq >= 14:
