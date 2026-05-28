@@ -228,7 +228,6 @@ st.markdown("<div class='section-header'>Ionospheric Conditions — IF843</div>"
 fof2  = latest_iono.get("foF2")  if latest_iono else None
 mufd  = latest_iono.get("MUFD")  if latest_iono else None
 md    = latest_iono.get("MD")    if latest_iono else None
-d_val = latest_iono.get("D")     if latest_iono else None
 iono_time = latest_iono.get("time") if latest_iono else None
 iono_age = ""
 if iono_time:
@@ -238,7 +237,7 @@ if iono_time:
     except Exception:
         iono_age = ""
 
-c1, c2, c3, c4 = st.columns(4)
+c1, c2, c3 = st.columns(3)
 
 with c1:
     st.markdown(f"""
@@ -264,14 +263,6 @@ with c3:
       <div class="metric-time">MUF = foF2 &times; M(D)</div>
     </div>""", unsafe_allow_html=True)
 
-with c4:
-    st.markdown(f"""
-    <div class="metric-card" title="Virtual height — apparent height of the F2 reflection point, calculated as if the signal traveled at the speed of light the whole path (it slows down in the ionosphere, so actual height is less). Typically 250-400 km for F2. Not reported by IF843 station.">
-      <div class="metric-label">D — Virtual Height</div>
-      <div class="metric-value">{fmt(d_val, 0)}<span class="metric-unit">km</span></div>
-      <div class="metric-time">at 3000 km</div>
-    </div>""", unsafe_allow_html=True)
-
 with st.expander("ⓘ Ionospheric parameters explained"):
     st.markdown("""
 **foF2** — F2 critical frequency. The highest frequency reflected straight up by the F2 layer.
@@ -288,10 +279,6 @@ or the propagation geometry weakens.
 frequency for DX than for straight-up NVIS. Typical value ~2.8–3.2. **Not a floor —
 it is a geometry factor.** Higher M(D) = better DX conditions relative to foF2.
 Formula: MUF = foF2 × M(D).
-
-**D** — Virtual height of the F2 reflection point (km). Calculated as if the signal traveled
-at light speed the whole way (actual height is lower due to slowing in the ionosphere).
-Typically 250–400 km. Not reported by station IF843 — always blank here.
 
 *Data from [GIRO DIDBase](https://giro.uml.edu), station IF843 (Idaho National Lab, 112.7°W),
 solar-offset −40 min for CN88 local solar conditions.*
