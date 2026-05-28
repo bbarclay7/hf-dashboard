@@ -311,86 +311,130 @@ wind_bz  = wind_data.get("bz")   if wind_data else None
 xray_cls = xray_data.get("class") if xray_data else None
 xray_flux = xray_data.get("flux") if xray_data else None
 
-# Scale bar positions (0–100%) for gauge needles
-_kp_pct   = min(100, max(0, (kp_val  or 0) / 9 * 100))                                    if kp_val   is not None else None
-_sfi_pct  = min(100, max(0, ((sfi_val or 65) - 65) / 155 * 100))                          if sfi_val  is not None else None
-_bz_pct   = min(100, max(0, ((wind_bz or 0) + 25) / 35 * 100))                            if wind_bz  is not None else None
-_xr_pct   = min(100, max(0, (math.log10(max(xray_flux, 1e-9)) + 9) / 5 * 100))            if xray_flux else None
+# Needle positions (0–100%) for TOS gauges
+_kp_pct  = min(100, max(0, (kp_val  or 0) / 9 * 100))                                  if kp_val   is not None else None
+_sfi_pct = min(100, max(0, ((sfi_val or 65) - 65) / 155 * 100))                        if sfi_val  is not None else None
+_bz_pct  = min(100, max(0, ((wind_bz or 0) + 25) / 35 * 100))                          if wind_bz  is not None else None
+_xr_pct  = min(100, max(0, (math.log10(max(xray_flux, 1e-9)) + 9) / 5 * 100))          if xray_flux else None
 
-def _needle(pct):
-    """White tick mark at position pct% on a scale bar."""
-    if pct is None:
-        return ""
-    return (f"<div style='position:absolute;top:-3px;left:calc({pct:.0f}% - 2px);"
-            f"width:4px;height:10px;background:#c8d3e0;border-radius:1px;'></div>")
+
+def _tos_gauge(pct, value_str, unit_str, label_str, segments, tick_labels,
+               tooltip="", value_color="#e8f0fa"):
+    """TOS-style SVG arc gauge. pct=0–100 needle position (None = no data)."""
+    CX, CY, R = 100, 88, 60
+    START, SWEEP = 150, 240  # SVG-convention degrees: start, clockwise sweep
+
+    def ang(p):
+        return START + (p / 100.0) * SWEEP
+
+    def pt(deg, radius=R):
+        a = math.radians(deg)
+        return CX + radius * math.cos(a), CY + radius * math.sin(a)
+
+    def arc(p0, p1, radius=R):
+        x0, y0 = pt(ang(p0), radius)
+        x1, y1 = pt(ang(p1), radius)
+        lg = 1 if (p1 - p0) / 100.0 * SWEEP > 180 else 0
+        return f"M{x0:.1f} {y0:.1f} A{radius} {radius} 0 {lg} 1 {x1:.1f} {y1:.1f}"
+
+    bg   = (f'<path d="{arc(0,100)}" fill="none" stroke="#1a2030" '
+            f'stroke-width="10" stroke-linecap="butt"/>')
+    segs = "".join(
+        f'<path d="{arc(p0,p1)}" fill="none" stroke="{c}" '
+        f'stroke-width="7" stroke-linecap="butt"/>'
+        for p0, p1, c in segments
+    )
+
+    ticks_svg = ""
+    for tp, tl in tick_labels:
+        xo, yo = pt(ang(tp), R + 2)
+        xi, yi = pt(ang(tp), R - 9)
+        xl, yl = pt(ang(tp), R + 17)
+        ticks_svg += (
+            f'<line x1="{xo:.1f}" y1="{yo:.1f}" x2="{xi:.1f}" y2="{yi:.1f}" '
+            f'stroke="#3a4458" stroke-width="1.5"/>'
+            f'<text x="{xl:.1f}" y="{yl:.1f}" text-anchor="middle" '
+            f'dominant-baseline="middle" font-family="Space Mono,monospace" '
+            f'font-size="8" fill="#3a4458">{tl}</text>'
+        )
+
+    ndl = ""
+    if pct is not None:
+        pc = max(0.0, min(100.0, float(pct)))
+        a  = math.radians(ang(pc))
+        xt = CX + (R - 4) * math.cos(a)
+        yt = CY + (R - 4) * math.sin(a)
+        perp = a + math.pi / 2
+        bw   = 3.5
+        pts  = (f"{xt:.1f},{yt:.1f} "
+                f"{CX + bw*math.cos(perp):.1f},{CY + bw*math.sin(perp):.1f} "
+                f"{CX - bw*math.cos(perp):.1f},{CY - bw*math.sin(perp):.1f}")
+        ndl  = (f'<polygon points="{pts}" fill="#d0dae8" opacity="0.95"/>'
+                f'<line x1="{CX}" y1="{CY}" x2="{xt:.1f}" y2="{yt:.1f}" '
+                f'stroke="#d0dae8" stroke-width="1" opacity="0.35"/>')
+
+    tt = tooltip.replace("&","&amp;").replace("<","&lt;").replace(">","&gt;")
+
+    return (
+        f'<svg viewBox="0 0 200 148" xmlns="http://www.w3.org/2000/svg" '
+        f'style="width:100%;display:block;" title="{tt}">'
+        f'<rect width="200" height="148" fill="#151821" rx="6" '
+        f'stroke="#2a2f3e" stroke-width="1"/>'
+        f'{bg}{segs}{ticks_svg}{ndl}'
+        f'<circle cx="{CX}" cy="{CY}" r="4" fill="#3a8fbf" stroke="#151821" stroke-width="1.5"/>'
+        f'<text x="{CX}" y="{CY-9}" text-anchor="middle" font-family="Space Mono,monospace" '
+        f'font-size="22" font-weight="700" fill="{value_color}">{value_str}</text>'
+        f'<text x="{CX}" y="{CY+7}" text-anchor="middle" font-family="Space Mono,monospace" '
+        f'font-size="9" fill="#5a6478">{unit_str}</text>'
+        f'<text x="{CX}" y="142" text-anchor="middle" font-family="Space Mono,monospace" '
+        f'font-size="8" fill="#3a8fbf" letter-spacing="2">{label_str}</text>'
+        f'</svg>'
+    )
+
 
 c5, c6, c7, c8 = st.columns(4)
 
-kp_css = kp_color_class(kp_val)
+_kp_color = "#00e676" if (kp_val or 0) < 3 else "#ffc107" if (kp_val or 0) < 5 else "#ef5350"
 with c5:
-    st.markdown(f"""
-    <div class="metric-card" title="Planetary K-index, 0-9 scale (3-hr intervals). Measures global geomagnetic disturbance driven by solar wind. Kp 0-2: quiet, best HF conditions. Kp 3-4: unsettled, some degradation on higher bands. Kp 5+: geomagnetic storm, severe HF disruption especially at high latitudes like CN88 (auroral absorption).">
-      <div class="metric-label">Kp — Geomagnetic Index</div>
-      <div class="metric-value {kp_css}">{fmt(kp_val, 1)}</div>
-      <div class="metric-time">0=quiet · 5+=storm</div>
-      <div style='margin-top:8px;position:relative;height:4px;border-radius:2px;
-                  background:linear-gradient(to right,#00e676,#ffc107 44%,#ef5350 66%);'>
-        {_needle(_kp_pct)}
-      </div>
-      <div style='display:flex;justify-content:space-between;font-size:8px;color:#3a4458;margin-top:2px;'>
-        <span>0</span><span>3</span><span>5</span><span>9</span>
-      </div>
-    </div>""", unsafe_allow_html=True)
+    st.html(_tos_gauge(
+        pct=_kp_pct, value_str=fmt(kp_val, 1), unit_str="", label_str="KP INDEX",
+        segments=[(0, 22, "#00e676"), (22, 55, "#ffc107"), (55, 100, "#ef5350")],
+        tick_labels=[(0, "0"), (22, "2"), (55, "5"), (100, "9")],
+        tooltip="Planetary K-index, 0-9 scale (3-hr). 0-2: quiet, best HF. 3-4: unsettled. 5+: storm, severe HF disruption at high latitudes like CN88.",
+        value_color=_kp_color,
+    ))
 
 with c6:
-    st.markdown(f"""
-    <div class="metric-card" title="Solar Flux Index (10.7 cm radio flux) — daily measure of solar ionizing UV output. Primary driver of F2 layer density, foF2, and MUF. SFI 70: solar minimum, low MUF. SFI 150+: solar maximum, excellent worldwide DX. Rough rule: each +10 sfu adds ~0.5-1 MHz to foF2 and ~2-3 MHz to MUF.">
-      <div class="metric-label">SFI — Solar Flux (F10.7)</div>
-      <div class="metric-value">{fmt(sfi_val, 0)}<span class="metric-unit">sfu</span></div>
-      <div class="metric-time">70=low · 150=high</div>
-      <div style='margin-top:8px;position:relative;height:4px;border-radius:2px;
-                  background:linear-gradient(to right,#ef5350,#ffc107 35%,#00e676 68%);'>
-        {_needle(_sfi_pct)}
-      </div>
-      <div style='display:flex;justify-content:space-between;font-size:8px;color:#3a4458;margin-top:2px;'>
-        <span>65</span><span>100</span><span>150</span><span>220</span>
-      </div>
-    </div>""", unsafe_allow_html=True)
+    st.html(_tos_gauge(
+        pct=_sfi_pct, value_str=fmt(sfi_val, 0), unit_str="sfu", label_str="SOLAR FLUX",
+        segments=[(0, 24, "#ef5350"), (24, 57, "#ffc107"), (57, 100, "#00e676")],
+        tick_labels=[(0, "65"), (24, "100"), (57, "150"), (100, "220")],
+        tooltip="Solar Flux Index (F10.7 cm). Primary driver of foF2 and MUF. 70=solar minimum, 150+=solar maximum. Each +10 sfu adds ~0.5-1 MHz to foF2.",
+    ))
 
 with c7:
-    bz_color = "#ef5350" if (wind_bz is not None and wind_bz < -5) else "#e8f0fa"
-    st.markdown(f"""
-    <div class="metric-card" title="Solar wind measured by DSCOVR satellite at L1, ~1 hour upstream of Earth. Bz is the north-south component of the interplanetary magnetic field: Bz negative (southward) = field couples into Earth magnetosphere, geomagnetic storm develops over hours. Bz < -5 nT sustained = watch for rising Kp. Speed > 500 km/s = fast wind, elevated storm risk.">
-      <div class="metric-label">Solar Wind Bz / Speed</div>
-      <div class="metric-value" style="color:{bz_color}">{fmt(wind_bz)}<span class="metric-unit">nT</span></div>
-      <div class="metric-time">{fmt(wind_spd, 0)} km/s · Bz- = storm risk</div>
-      <div style='margin-top:8px;position:relative;height:4px;border-radius:2px;
-                  background:linear-gradient(to right,#ef5350,#ffc107 43%,#00e676 71%);'>
-        {_needle(_bz_pct)}
-      </div>
-      <div style='position:relative;height:12px;font-size:8px;color:#3a4458;margin-top:2px;'>
-        <span style='position:absolute;left:0'>−25</span>
-        <span style='position:absolute;left:68%;transform:translateX(-50%)'>0</span>
-        <span style='position:absolute;right:0'>+10</span>
-      </div>
-    </div>""", unsafe_allow_html=True)
+    _bz_color = "#ef5350" if (wind_bz is not None and wind_bz < -5) else "#e8f0fa"
+    _spd_str  = f"{fmt(wind_spd, 0)} km/s" if wind_spd is not None else "— km/s"
+    st.html(_tos_gauge(
+        pct=_bz_pct, value_str=fmt(wind_bz), unit_str=f"nT  {_spd_str}", label_str="SOLAR WIND",
+        segments=[(0, 43, "#ef5350"), (43, 71, "#ffc107"), (71, 100, "#00e676")],
+        tick_labels=[(0, "-25"), (43, "-10"), (71, "0"), (100, "+10")],
+        tooltip="Solar wind Bz from DSCOVR (~1 hr upstream). Bz negative = southward field couples to Earth magnetosphere, storm develops. Bz < -5 nT sustained: watch for rising Kp.",
+        value_color=_bz_color,
+    ))
 
-xray_colors = {"A": "#607d8b", "B": "#00acc1", "C": "#ffc107", "M": "#ff7043", "X": "#ef5350"}
-xray_color = xray_colors.get(xray_cls, "#e8f0fa") if xray_cls else "#e8f0fa"
+_xray_colors = {"A": "#607d8b", "B": "#00acc1", "C": "#ffc107", "M": "#ff7043", "X": "#ef5350"}
+_xr_vc = _xray_colors.get(xray_cls, "#e8f0fa") if xray_cls else "#e8f0fa"
 with c8:
-    st.markdown(f"""
-    <div class="metric-card" title="GOES X-ray flux from solar flares. Flares cause sudden ionospheric disturbances (SID): D-region absorbs HF on the sunlit side of Earth within minutes. Classes: A/B = background, no effect. C = minor, slight absorption on 10/15m. M = moderate, 1-2 grade penalty on high bands. X = major, possible HF blackout on daytime side. Scale is logarithmic.">
-      <div class="metric-label">GOES X-ray Flux</div>
-      <div class="metric-value" style="color:{xray_color}">{xray_cls or "—"}<span class="metric-unit">class</span></div>
-      <div class="metric-time">{f"{xray_flux:.1e}" if xray_flux else ""} W/m²</div>
-      <div style='margin-top:8px;position:relative;height:4px;border-radius:2px;
-                  background:linear-gradient(to right,#607d8b,#00acc1 40%,#ffc107 60%,#ff7043 80%,#ef5350);'>
-        {_needle(_xr_pct)}
-      </div>
-      <div style='display:flex;justify-content:space-between;font-size:8px;color:#3a4458;margin-top:2px;'>
-        <span>A</span><span>B</span><span>C</span><span>M</span><span>X</span>
-      </div>
-    </div>""", unsafe_allow_html=True)
+    st.html(_tos_gauge(
+        pct=_xr_pct, value_str=xray_cls or "—",
+        unit_str=f"{xray_flux:.1e} W/m²" if xray_flux else "",
+        label_str="X-RAY FLUX",
+        segments=[(0, 40, "#607d8b"), (40, 60, "#00acc1"), (60, 80, "#ffc107"), (80, 100, "#ef5350")],
+        tick_labels=[(0, "A"), (40, "B"), (60, "C"), (80, "M"), (100, "X")],
+        tooltip="GOES X-ray flux (log scale). A/B: background. C: minor absorption. M: moderate, 1-2 grade penalty. X: major, possible HF blackout on daytime side.",
+        value_color=_xr_vc,
+    ))
 
 with st.expander("ⓘ Space weather parameters explained"):
     st.markdown("""
