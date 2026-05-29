@@ -509,8 +509,8 @@ with c7:
     _spd_str  = f"{fmt(wind_spd, 0)} km/s" if wind_spd is not None else "— km/s"
     st.markdown(_tos_gauge(
         pct=_bz_pct, value_str=fmt(wind_bz), unit_str=f"nT  {_spd_str}", label_str="SOLAR WIND",
-        segments=[(0, 30, "#ef5350"), (30, 50, "#ffc107"), (50, 100, "#00e676")],
-        tick_labels=[(0, "-25"), (30, "-10"), (50, "0"), (100, "+25")],
+        segments=[(0, 30, "#ef5350"), (30, 40, "#ffc107"), (40, 100, "#00e676")],
+        tick_labels=[(0, "-25"), (30, "-10"), (40, "-5"), (50, "0"), (100, "+25")],
         tooltip="Solar wind Bz from DSCOVR (~1 hr upstream). Bz negative = southward field couples to Earth magnetosphere, storm develops. Bz < -5 nT sustained: watch for rising Kp.",
         value_color=_bz_color,
         palette=P,
