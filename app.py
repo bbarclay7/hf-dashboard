@@ -167,6 +167,18 @@ st.markdown(f"""
     border: 1px solid {P['border']} !important;
   }}
 
+  /* Selectbox, slider, and other widget inputs in sidebar */
+  [data-testid="stSidebar"] [data-baseweb="select"] > div,
+  [data-testid="stSidebar"] [data-baseweb="select"] span,
+  [data-testid="stSidebar"] [data-baseweb="popover"] li,
+  [data-testid="stSidebar"] input {{
+    background-color: {P['card_bg']} !important;
+    color: {P['text']} !important;
+  }}
+  [data-testid="stSidebar"] [data-baseweb="select"] > div {{
+    border-color: {P['border']} !important;
+  }}
+
   /* Hide Streamlit chrome */
   #MainMenu, footer, header {{ visibility: hidden; }}
   .block-container {{ padding-top: 1.5rem; }}
