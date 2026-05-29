@@ -1,6 +1,6 @@
 # HF Propagation Dashboard · AK6MJ
 
-Real-time HF propagation conditions for **Freeland WA (CN87)** combining ionospheric data from GIRO DIDBase with space weather from NOAA SWPC.
+Real-time HF propagation conditions for **Freeland WA (CN88)** combining ionospheric data from GIRO DIDBase with space weather from NOAA SWPC.
 
 ## Features
 

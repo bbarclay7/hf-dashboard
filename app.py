@@ -37,75 +37,127 @@ st.set_page_config(
 )
 
 # ──────────────────────────────────────────────────────────────
+# Theme — read from URL query param so the choice is bookmarkable
+# ──────────────────────────────────────────────────────────────
+
+_PALETTES = {
+    "dark": {
+        "app_bg":       "#0d0f14",
+        "sidebar_bg":   "#151821",
+        "card_bg":      "#151821",
+        "border":       "#2a2f3e",
+        "text":         "#c8d3e0",
+        "text_bright":  "#e8f0fa",
+        "text_dim":     "#5a6478",
+        "text_faint":   "#3a4458",
+        "accent":       "#3a8fbf",
+        "grid":         "#1e2535",
+        "needle":       "#d0dae8",
+        "gauge_track":  "#1a2030",
+        "nvis_zone":    "#1a3a1a",
+        "dx_zone":      "#0f1e2e",
+        "ruler_bar":    "#111318",
+        "best_nvis_bg": "#0a1a0e",
+        "plot_bg":      "#151821",
+        "plot_paper":   "#0d0f14",
+    },
+    "light": {
+        "app_bg":       "#f5f7fa",
+        "sidebar_bg":   "#eef1f6",
+        "card_bg":      "#ffffff",
+        "border":       "#d0d8e4",
+        "text":         "#1a2030",
+        "text_bright":  "#0d1520",
+        "text_dim":     "#6b7c96",
+        "text_faint":   "#9ba8b8",
+        "accent":       "#1a6fa0",
+        "grid":         "#dde5ee",
+        "needle":       "#1a2030",
+        "gauge_track":  "#e0e5ed",
+        "nvis_zone":    "#d4eeda",
+        "dx_zone":      "#d4e5f5",
+        "ruler_bar":    "#e8ecf2",
+        "best_nvis_bg": "#edf7ef",
+        "plot_bg":      "#ffffff",
+        "plot_paper":   "#f5f7fa",
+    },
+}
+
+theme = st.query_params.get("theme", "dark")
+if theme not in _PALETTES:
+    theme = "dark"
+P = _PALETTES[theme]
+
+# ──────────────────────────────────────────────────────────────
 # Styling
 # ──────────────────────────────────────────────────────────────
 
-st.markdown("""
+st.markdown(f"""
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@300;400;600&display=swap');
 
-  /* Dark terminal aesthetic */
-  .stApp { background-color: #0d0f14; color: #c8d3e0; }
-  
+  .stApp {{ background-color: {P['app_bg']}; color: {P['text']}; }}
+  [data-testid="stSidebar"] {{ background-color: {P['sidebar_bg']}; }}
+
   /* Metric cards */
-  .metric-card {
-    background: #151821;
-    border: 1px solid #2a2f3e;
+  .metric-card {{
+    background: {P['card_bg']};
+    border: 1px solid {P['border']};
     border-radius: 6px;
     padding: 16px 20px;
     font-family: 'Space Mono', monospace;
     margin-bottom: 8px;
-  }
-  .metric-label {
+  }}
+  .metric-label {{
     font-size: 10px;
     letter-spacing: 0.15em;
     text-transform: uppercase;
-    color: #5a6478;
+    color: {P['text_dim']};
     margin-bottom: 4px;
-  }
-  .metric-value {
+  }}
+  .metric-value {{
     font-size: 28px;
     font-weight: 700;
-    color: #e8f0fa;
+    color: {P['text_bright']};
     line-height: 1;
-  }
-  .metric-unit {
+  }}
+  .metric-unit {{
     font-size: 12px;
-    color: #5a6478;
+    color: {P['text_dim']};
     margin-left: 4px;
-  }
-  .metric-time {
+  }}
+  .metric-time {{
     font-size: 10px;
-    color: #3a4458;
+    color: {P['text_faint']};
     margin-top: 6px;
-  }
+  }}
 
   /* Band status pills */
-  .band-open    { color: #00e676; }
-  .band-marginal{ color: #ffc107; }
-  .band-closed  { color: #ef5350; }
-  .band-unknown { color: #607d8b; }
+  .band-open    {{ color: #00e676; }}
+  .band-marginal{{ color: #ffc107; }}
+  .band-closed  {{ color: #ef5350; }}
+  .band-unknown {{ color: #607d8b; }}
 
   /* Section headers */
-  .section-header {
+  .section-header {{
     font-family: 'Space Mono', monospace;
     font-size: 11px;
     letter-spacing: 0.2em;
     text-transform: uppercase;
-    color: #3a8fbf;
-    border-bottom: 1px solid #1e2535;
+    color: {P['accent']};
+    border-bottom: 1px solid {P['grid']};
     padding-bottom: 6px;
     margin: 24px 0 16px 0;
-  }
+  }}
 
   /* Kp color badge */
-  .kp-low    { color: #00e676; }
-  .kp-mid    { color: #ffc107; }
-  .kp-high   { color: #ef5350; }
+  .kp-low    {{ color: #00e676; }}
+  .kp-mid    {{ color: #ffc107; }}
+  .kp-high   {{ color: #ef5350; }}
 
   /* Hide Streamlit chrome */
-  #MainMenu, footer, header { visibility: hidden; }
-  .block-container { padding-top: 1.5rem; }
+  #MainMenu, footer, header {{ visibility: hidden; }}
+  .block-container {{ padding-top: 1.5rem; }}
 </style>
 """, unsafe_allow_html=True)
 
@@ -118,6 +170,12 @@ with st.sidebar:
     st.markdown(f"## 📡 HF Dashboard")
     st.markdown("**AK6MJ** · CN88 · Freeland WA")
     st.markdown("---")
+
+    _other_theme = "light" if theme == "dark" else "dark"
+    _toggle_label = "☀️ Light mode" if theme == "dark" else "🌙 Dark mode"
+    if st.button(_toggle_label, use_container_width=True):
+        st.query_params["theme"] = _other_theme
+        st.rerun()
 
     station = st.selectbox(
         "Ionosonde Station",
@@ -137,8 +195,8 @@ with st.sidebar:
     st.markdown("---")
     st.markdown("""
     **Data Sources**
-    - [GIRO DIDBase](https://giro.uml.edu) — Ionosonde  
-    - [NOAA SWPC](https://www.swpc.noaa.gov) — Space weather  
+    - [GIRO DIDBase](https://giro.uml.edu) — Ionosonde
+    - [NOAA SWPC](https://www.swpc.noaa.gov) — Space weather
     - Cadence: ~15 min (ionosonde), ~1 min (Kp)
     """)
 
@@ -214,7 +272,11 @@ with col_title:
     )
 with col_time:
     if refresh_interval > 0:
-        st.markdown(f"<div style='text-align:right; padding-top:24px; font-size:12px; color:#3a4458;'>Auto-refresh: {refresh_interval}s</div>", unsafe_allow_html=True)
+        st.markdown(
+            f"<div style='text-align:right; padding-top:24px; font-size:12px; color:{P['text_faint']};'>"
+            f"Auto-refresh: {refresh_interval}s</div>",
+            unsafe_allow_html=True,
+        )
 
 st.markdown("---")
 
@@ -263,11 +325,11 @@ with c3:
       <div class="metric-time">MUF = foF2 &times; M(D)</div>
     </div>""", unsafe_allow_html=True)
 
-st.html("""
-<details style="font-family:Space Mono,monospace;font-size:11px;color:#c8d3e0;
-  background:#151821;padding:8px 12px;border-radius:4px;border:1px solid #2a2f3e;
+st.html(f"""
+<details style="font-family:Space Mono,monospace;font-size:11px;color:{P['text']};
+  background:{P['card_bg']};padding:8px 12px;border-radius:4px;border:1px solid {P['border']};
   margin-top:4px;line-height:1.65">
-<summary style="cursor:pointer;color:#3a8fbf;font-size:11px;
+<summary style="cursor:pointer;color:{P['accent']};font-size:11px;
   letter-spacing:.05em;padding:2px 0;user-select:none">ⓘ Ionospheric parameters explained</summary>
 <div style="margin-top:8px">
 <p><b>foF2</b> — F2 critical frequency. The highest frequency reflected straight up by the F2 layer.
@@ -278,7 +340,7 @@ collapses at night. Driven by solar UV ionizing the upper atmosphere.</p>
 bounces off F2 at the shallow angle needed for a one-hop ~1800 mi skip. <b>DX ceiling.</b>
 MUF = foF2 × M(D). Higher MUF = more bands open for long-haul DX.</p>
 <p><b>M(D)</b> — Propagation multiplier (MUF ÷ foF2). Typical value ~2.8–3.2. MUF = foF2 × M(D).</p>
-<p><em>Data from <a href="https://giro.uml.edu" target="_blank" style="color:#3a8fbf">GIRO DIDBase</a>,
+<p><em>Data from <a href="https://giro.uml.edu" target="_blank" style="color:{P['accent']}">GIRO DIDBase</a>,
 station IF843 (Idaho National Lab, 112.7°W), solar-offset −40 min for CN88.</em></p>
 </div></details>
 """)
@@ -305,8 +367,12 @@ _xr_pct  = min(100, max(0, (math.log10(max(xray_flux, 1e-9)) + 9) / 5 * 100))   
 
 
 def _tos_gauge(pct, value_str, unit_str, label_str, segments, tick_labels,
-               tooltip="", value_color="#e8f0fa"):
+               tooltip="", value_color=None, palette=None):
     """TOS-style SVG arc gauge. pct=0–100 needle position (None = no data)."""
+    Q = palette or P
+    if value_color is None:
+        value_color = Q["text_bright"]
+
     CX, CY, R = 100, 88, 60
     START, SWEEP = 150, 240  # SVG-convention degrees: start, clockwise sweep
 
@@ -323,7 +389,7 @@ def _tos_gauge(pct, value_str, unit_str, label_str, segments, tick_labels,
         lg = 1 if (p1 - p0) / 100.0 * SWEEP > 180 else 0
         return f"M{x0:.1f} {y0:.1f} A{radius} {radius} 0 {lg} 1 {x1:.1f} {y1:.1f}"
 
-    bg   = (f'<path d="{arc(0,100)}" fill="none" stroke="#1a2030" '
+    bg   = (f'<path d="{arc(0,100)}" fill="none" stroke="{Q["gauge_track"]}" '
             f'stroke-width="10" stroke-linecap="butt"/>')
     segs = "".join(
         f'<path d="{arc(p0,p1)}" fill="none" stroke="{c}" '
@@ -338,10 +404,10 @@ def _tos_gauge(pct, value_str, unit_str, label_str, segments, tick_labels,
         xl, yl = pt(ang(tp), R + 17)
         ticks_svg += (
             f'<line x1="{xo:.1f}" y1="{yo:.1f}" x2="{xi:.1f}" y2="{yi:.1f}" '
-            f'stroke="#3a4458" stroke-width="1.5"/>'
+            f'stroke="{Q["text_faint"]}" stroke-width="1.5"/>'
             f'<text x="{xl:.1f}" y="{yl:.1f}" text-anchor="middle" '
             f'dominant-baseline="middle" font-family="Space Mono,monospace" '
-            f'font-size="8" fill="#3a4458">{tl}</text>'
+            f'font-size="8" fill="{Q["text_faint"]}">{tl}</text>'
         )
 
     ndl = ""
@@ -355,9 +421,9 @@ def _tos_gauge(pct, value_str, unit_str, label_str, segments, tick_labels,
         pts  = (f"{xt:.1f},{yt:.1f} "
                 f"{CX + bw*math.cos(perp):.1f},{CY + bw*math.sin(perp):.1f} "
                 f"{CX - bw*math.cos(perp):.1f},{CY - bw*math.sin(perp):.1f}")
-        ndl  = (f'<polygon points="{pts}" fill="#d0dae8" opacity="0.95"/>'
+        ndl  = (f'<polygon points="{pts}" fill="{Q["needle"]}" opacity="0.95"/>'
                 f'<line x1="{CX}" y1="{CY}" x2="{xt:.1f}" y2="{yt:.1f}" '
-                f'stroke="#d0dae8" stroke-width="1" opacity="0.35"/>')
+                f'stroke="{Q["needle"]}" stroke-width="1" opacity="0.35"/>')
 
     tt = tooltip.replace("&","&amp;").replace("<","&lt;").replace(">","&gt;")
 
@@ -365,16 +431,16 @@ def _tos_gauge(pct, value_str, unit_str, label_str, segments, tick_labels,
         f'<div style="max-width:190px;margin:0 auto;">'
         f'<svg viewBox="0 0 200 148" xmlns="http://www.w3.org/2000/svg" '
         f'width="200" height="148" style="width:100%;height:auto;display:block;" title="{tt}">'
-        f'<rect width="200" height="148" fill="#151821" rx="6" '
-        f'stroke="#2a2f3e" stroke-width="1"/>'
+        f'<rect width="200" height="148" fill="{Q["card_bg"]}" rx="6" '
+        f'stroke="{Q["border"]}" stroke-width="1"/>'
         f'{bg}{segs}{ticks_svg}{ndl}'
-        f'<circle cx="{CX}" cy="{CY}" r="4" fill="#3a8fbf" stroke="#151821" stroke-width="1.5"/>'
+        f'<circle cx="{CX}" cy="{CY}" r="4" fill="{Q["accent"]}" stroke="{Q["card_bg"]}" stroke-width="1.5"/>'
         f'<text x="{CX}" y="{CY-9}" text-anchor="middle" font-family="Space Mono,monospace" '
         f'font-size="22" font-weight="700" fill="{value_color}">{value_str}</text>'
         f'<text x="{CX}" y="{CY+7}" text-anchor="middle" font-family="Space Mono,monospace" '
-        f'font-size="9" fill="#5a6478">{unit_str}</text>'
+        f'font-size="9" fill="{Q["text_dim"]}">{unit_str}</text>'
         f'<text x="{CX}" y="142" text-anchor="middle" font-family="Space Mono,monospace" '
-        f'font-size="8" fill="#3a8fbf" letter-spacing="2">{label_str}</text>'
+        f'font-size="8" fill="{Q["accent"]}" letter-spacing="2">{label_str}</text>'
         f'</svg>'
         f'</div>'
     )
@@ -390,6 +456,7 @@ with c5:
         tick_labels=[(0, "0"), (22, "2"), (55, "5"), (100, "9")],
         tooltip="Planetary K-index, 0-9 scale (3-hr). 0-2: quiet, best HF. 3-4: unsettled. 5+: storm, severe HF disruption at high latitudes like CN88.",
         value_color=_kp_color,
+        palette=P,
     ), unsafe_allow_html=True)
 
 with c6:
@@ -398,10 +465,11 @@ with c6:
         segments=[(0, 24, "#ef5350"), (24, 57, "#ffc107"), (57, 100, "#00e676")],
         tick_labels=[(0, "65"), (24, "100"), (57, "150"), (100, "220")],
         tooltip="Solar Flux Index (F10.7 cm). Primary driver of foF2 and MUF. 70=solar minimum, 150+=solar maximum. Each +10 sfu adds ~0.5-1 MHz to foF2.",
+        palette=P,
     ), unsafe_allow_html=True)
 
 with c7:
-    _bz_color = "#ef5350" if (wind_bz is not None and wind_bz < -5) else "#e8f0fa"
+    _bz_color = "#ef5350" if (wind_bz is not None and wind_bz < -5) else P["text_bright"]
     _spd_str  = f"{fmt(wind_spd, 0)} km/s" if wind_spd is not None else "— km/s"
     st.markdown(_tos_gauge(
         pct=_bz_pct, value_str=fmt(wind_bz), unit_str=f"nT  {_spd_str}", label_str="SOLAR WIND",
@@ -409,10 +477,11 @@ with c7:
         tick_labels=[(0, "-25"), (43, "-10"), (71, "0"), (100, "+10")],
         tooltip="Solar wind Bz from DSCOVR (~1 hr upstream). Bz negative = southward field couples to Earth magnetosphere, storm develops. Bz < -5 nT sustained: watch for rising Kp.",
         value_color=_bz_color,
+        palette=P,
     ), unsafe_allow_html=True)
 
 _xray_colors = {"A": "#607d8b", "B": "#00acc1", "C": "#ffc107", "M": "#ff7043", "X": "#ef5350"}
-_xr_vc = _xray_colors.get(xray_cls, "#e8f0fa") if xray_cls else "#e8f0fa"
+_xr_vc = _xray_colors.get(xray_cls, P["text_bright"]) if xray_cls else P["text_bright"]
 with c8:
     st.markdown(_tos_gauge(
         pct=_xr_pct, value_str=xray_cls or "—",
@@ -422,27 +491,28 @@ with c8:
         tick_labels=[(0, "A"), (40, "B"), (60, "C"), (80, "M"), (100, "X")],
         tooltip="GOES X-ray flux (log scale). A/B: background. C: minor absorption. M: moderate, 1-2 grade penalty. X: major, possible HF blackout on daytime side.",
         value_color=_xr_vc,
+        palette=P,
     ), unsafe_allow_html=True)
 
-st.html("""
-<details style="font-family:Space Mono,monospace;font-size:11px;color:#c8d3e0;
-  background:#151821;padding:8px 12px;border-radius:4px;border:1px solid #2a2f3e;
+st.html(f"""
+<details style="font-family:Space Mono,monospace;font-size:11px;color:{P['text']};
+  background:{P['card_bg']};padding:8px 12px;border-radius:4px;border:1px solid {P['border']};
   margin-top:4px;line-height:1.65">
-<summary style="cursor:pointer;color:#3a8fbf;font-size:11px;
+<summary style="cursor:pointer;color:{P['accent']};font-size:11px;
   letter-spacing:.05em;padding:2px 0;user-select:none">ⓘ Space weather parameters explained</summary>
 <div style="margin-top:8px">
 <p><b>Kp</b> — Planetary K-index (0–9 scale, 3-hour intervals). Geomagnetic disturbance level.
 <br>0–2: quiet — best HF &nbsp;|&nbsp; 3–4: unsettled &nbsp;|&nbsp; 5+: storm, severe disruption at CN88 latitude.
 <br>Penalizes band grades here, extra penalty above 14 MHz.
-<a href="https://www.swpc.noaa.gov/products/planetary-k-index" target="_blank" style="color:#3a8fbf">NOAA Kp</a></p>
+<a href="https://www.swpc.noaa.gov/products/planetary-k-index" target="_blank" style="color:{P['accent']}">NOAA Kp</a></p>
 <p><b>SFI</b> — Solar Flux Index (F10.7 cm). Primary long-term driver of foF2 and MUF.
 <br>~70: solar minimum &nbsp;|&nbsp; 150+: solar maximum. Each +10 sfu ≈ +0.5–1 MHz to foF2.
-<a href="https://www.swpc.noaa.gov/phenomena/f107-cm-radio-emissions" target="_blank" style="color:#3a8fbf">NOAA F10.7</a></p>
+<a href="https://www.swpc.noaa.gov/phenomena/f107-cm-radio-emissions" target="_blank" style="color:{P['accent']}">NOAA F10.7</a></p>
 <p><b>Bz</b> — Solar wind Z-field (DSCOVR, ~1 hr upstream). <b>Negative = southward</b> = couples
 into magnetosphere → storm. Bz &lt; −5 nT sustained: watch for rising Kp over next 1–3 hrs.</p>
 <p><b>X-ray</b> — GOES flare flux. Causes sudden D-region absorption on the sunlit side.
 <br>A/B: none &nbsp;|&nbsp; C: minor &nbsp;|&nbsp; M: 1–2 grade penalty &nbsp;|&nbsp; X: possible blackout.
-<a href="https://www.swpc.noaa.gov/phenomena/solar-flares-radio-blackouts" target="_blank" style="color:#3a8fbf">NOAA flares</a></p>
+<a href="https://www.swpc.noaa.gov/phenomena/solar-flares-radio-blackouts" target="_blank" style="color:{P['accent']}">NOAA flares</a></p>
 </div></details>
 """)
 
@@ -451,8 +521,9 @@ into magnetosphere → storm. Bz &lt; −5 nT sustained: watch for rising Kp ove
 # ROW 3: Band conditions + foF2 trend
 # ──────────────────────────────────────────────────────────────
 
-def _freq_ruler(fof2_val, mufd_val, bands_list):
+def _freq_ruler(fof2_val, mufd_val, bands_list, palette=None):
     """SVG frequency ruler showing NVIS/DX/closed zones across 1.8–30 MHz (log scale)."""
+    Q = palette or P
     W, H = 340, 56
     BAR_Y, BAR_H = 20, 13
     F_MIN, F_MAX = 1.8, 30.0
@@ -467,15 +538,15 @@ def _freq_ruler(fof2_val, mufd_val, bands_list):
 
     svg = (f'<svg viewBox="0 0 {W} {H}" xmlns="http://www.w3.org/2000/svg" '
            f'width="{W}" height="{H}" style="width:100%;height:auto;display:block;">'
-           f'<rect width="{W}" height="{H}" fill="#0d0f14"/>'
-           f'<rect x="0" y="{BAR_Y}" width="{W}" height="{BAR_H}" fill="#111318" rx="2"/>')
+           f'<rect width="{W}" height="{H}" fill="{Q["app_bg"]}"/>'
+           f'<rect x="0" y="{BAR_Y}" width="{W}" height="{BAR_H}" fill="{Q["ruler_bar"]}" rx="2"/>')
 
     # Colour zones
     if x_fof2:
-        svg += f'<rect x="0" y="{BAR_Y}" width="{x_fof2:.1f}" height="{BAR_H}" fill="#1a3a1a" rx="2"/>'
+        svg += f'<rect x="0" y="{BAR_Y}" width="{x_fof2:.1f}" height="{BAR_H}" fill="{Q["nvis_zone"]}" rx="2"/>'
     if x_fof2 and x_mufd and x_mufd > x_fof2:
         svg += (f'<rect x="{x_fof2:.1f}" y="{BAR_Y}" width="{x_mufd - x_fof2:.1f}" '
-                f'height="{BAR_H}" fill="#0f1e2e"/>')
+                f'height="{BAR_H}" fill="{Q["dx_zone"]}"/>')
 
     # Zone labels
     if x_fof2 and x_fof2 > 22:
@@ -485,7 +556,7 @@ def _freq_ruler(fof2_val, mufd_val, bands_list):
     if x_fof2 and x_mufd and (x_mufd - x_fof2) > 22:
         svg += (f'<text x="{(x_fof2 + x_mufd)/2:.1f}" y="{BAR_Y + BAR_H/2 + 1:.1f}" '
                 f'text-anchor="middle" dominant-baseline="middle" '
-                f'font-family="Space Mono,monospace" font-size="6" fill="#3a8fbf" opacity="0.7">DX</text>')
+                f'font-family="Space Mono,monospace" font-size="6" fill="{Q["accent"]}" opacity="0.7">DX</text>')
 
     # Band ticks
     band_lkp = {b["band"]: b for b in (bands_list or [])}
@@ -496,11 +567,11 @@ def _freq_ruler(fof2_val, mufd_val, bands_list):
         bx = xp(fcenter)
         bi = band_lkp.get(bname, {})
         if fof2_val and fcenter <= fof2_val:
-            tc = bi.get("nvis_color", "#5a6478")
+            tc = bi.get("nvis_color", Q["text_dim"])
         elif mufd_val and fcenter <= mufd_val:
-            tc = bi.get("dx_color", "#5a6478")
+            tc = bi.get("dx_color", Q["text_dim"])
         else:
-            tc = "#2a3040"
+            tc = Q["border"]
         label = bname.replace("m", "")
         svg += (f'<line x1="{bx:.1f}" y1="{BAR_Y}" x2="{bx:.1f}" y2="{BAR_Y+BAR_H}" '
                 f'stroke="{tc}" stroke-width="1" opacity="0.6"/>'
@@ -510,17 +581,17 @@ def _freq_ruler(fof2_val, mufd_val, bands_list):
     # foF2 marker
     if x_fof2:
         svg += (f'<line x1="{x_fof2:.1f}" y1="{BAR_Y-3}" x2="{x_fof2:.1f}" y2="{BAR_Y+BAR_H+2}" '
-                f'stroke="#e8f0fa" stroke-width="1.5"/>'
+                f'stroke="{Q["text_bright"]}" stroke-width="1.5"/>'
                 f'<text x="{x_fof2:.1f}" y="{BAR_Y-6}" text-anchor="middle" '
-                f'font-family="Space Mono,monospace" font-size="6.5" fill="#e8f0fa">'
+                f'font-family="Space Mono,monospace" font-size="6.5" fill="{Q["text_bright"]}">'
                 f'foF2 {fof2_val:.1f}</text>')
 
     # MUF marker
     if x_mufd and mufd_val and mufd_val < F_MAX:
         svg += (f'<line x1="{x_mufd:.1f}" y1="{BAR_Y-3}" x2="{x_mufd:.1f}" y2="{BAR_Y+BAR_H+2}" '
-                f'stroke="#3a8fbf" stroke-width="1.5"/>'
+                f'stroke="{Q["accent"]}" stroke-width="1.5"/>'
                 f'<text x="{x_mufd:.1f}" y="{BAR_Y-6}" text-anchor="middle" '
-                f'font-family="Space Mono,monospace" font-size="6.5" fill="#3a8fbf">'
+                f'font-family="Space Mono,monospace" font-size="6.5" fill="{Q["accent"]}">'
                 f'MUF {mufd_val:.1f}</text>')
 
     svg += '</svg>'
@@ -538,13 +609,13 @@ if _best_nvis:
     _qp_col  = _best_nvis["nvis_color"]
     _kp_note = (f" &nbsp;·&nbsp; Kp {kp_val:.1f} — watch absorption" if kp_val and kp_val >= 3 else "")
     st.markdown(
-        f'<div style="font-family:Space Mono,monospace; background:#0a1a0e; '
+        f'<div style="font-family:Space Mono,monospace; background:{P["best_nvis_bg"]}; '
         f'border-left:3px solid {_qp_col}; border-radius:4px; '
         f'padding:8px 14px; margin-bottom:6px; font-size:12px;">'
-        f'<span style="color:#3a8fbf; font-size:9px; letter-spacing:.1em">best nvis / varahf band now</span><br>'
+        f'<span style="color:{P["accent"]}; font-size:9px; letter-spacing:.1em">Best NVIS / VARA HF Band Now</span><br>'
         f'<span style="color:{_qp_col}; font-size:22px; font-weight:700">{_best_nvis["band"]}</span>'
-        f'<span style="color:#c8d3e0; margin-left:10px">{_best_nvis["nvis_label"]}</span>'
-        f'<span style="color:#5a6478; margin-left:10px; font-size:10px">NVIS ≈ 50–500 km{_kp_note}</span>'
+        f'<span style="color:{P["text"]}; margin-left:10px">{_best_nvis["nvis_label"]}</span>'
+        f'<span style="color:{P["text_dim"]}; margin-left:10px; font-size:10px">NVIS ≈ 50–500 km{_kp_note}</span>'
         f'</div>',
         unsafe_allow_html=True,
     )
@@ -556,17 +627,17 @@ col_bands, col_chart = st.columns([1, 2])
 # Band conditions table — NVIS and DX grades
 with col_bands:
     # Frequency ruler
-    st.markdown(_freq_ruler(fof2, mufd, bands), unsafe_allow_html=True)
+    st.markdown(_freq_ruler(fof2, mufd, bands, palette=P), unsafe_allow_html=True)
 
     # Build styled HTML table
-    band_md = """
-    <div style='font-family: Space Mono, monospace; font-size: 12px; background:#0d0f14; color:#c8d3e0;'>
+    band_md = f"""
+    <div style='font-family: Space Mono, monospace; font-size: 12px; background:{P['app_bg']}; color:{P['text']};'>
     <table style='width:100%; border-collapse:collapse;'>
-    <tr style='color:#3a8fbf; font-size:10px; letter-spacing:0.08em; border-bottom:1px solid #2a2f3e;'>
+    <tr style='color:{P['accent']}; font-size:10px; letter-spacing:0.08em; border-bottom:1px solid {P['border']};'>
       <th style='text-align:left; padding:4px 6px'>BAND</th>
       <th style='text-align:left; padding:4px 6px'>NVIS</th>
       <th style='text-align:left; padding:4px 6px'>DX</th>
-      <th style='text-align:left; padding:4px 6px; color:#3a4458'>NOTE</th>
+      <th style='text-align:left; padding:4px 6px; color:{P['text_faint']}'>NOTE</th>
     </tr>
     """
     for b in bands:
@@ -576,8 +647,8 @@ with col_bands:
         dx_lbl     = b["dx_label"]
         freq       = b["freq_mhz"]
         # N/A bands get muted style
-        nvis_style = f"color:{nvis_color}" if nvis_lbl not in ("N/A", "Unknown") else "color:#2a3040"
-        dx_style   = f"color:{dx_color}"   if dx_lbl   not in ("N/A", "Unknown") else "color:#2a3040"
+        nvis_style = f"color:{nvis_color}" if nvis_lbl not in ("N/A", "Unknown") else f"color:{P['border']}"
+        dx_style   = f"color:{dx_color}"   if dx_lbl   not in ("N/A", "Unknown") else f"color:{P['border']}"
         # Short note for the visible NOTE column
         if mufd and fof2 and freq > fof2 and freq <= mufd * 1.05:
             _md = mufd / fof2
@@ -597,18 +668,18 @@ with col_bands:
             if _is_best else b["band"]
         )
         band_md += f"""
-        <tr style='border-bottom:1px solid #151821; cursor:default'
+        <tr style='border-bottom:1px solid {P['border']}; cursor:default'
             title='NVIS: {b["nvis_note"]} | DX: {b["dx_note"]}'>
-          <td style='padding:5px 6px; color:#c8d3e0'>{_band_cell}</td>
+          <td style='padding:5px 6px; color:{P['text']}'>{_band_cell}</td>
           <td style='padding:5px 6px; {nvis_style}'>{nvis_lbl}</td>
           <td style='padding:5px 6px; {dx_style}'>{dx_lbl}</td>
-          <td style='padding:5px 6px; font-size:10px; color:#5a6478'>{short_note}</td>
+          <td style='padding:5px 6px; font-size:10px; color:{P['text_dim']}'>{short_note}</td>
         </tr>"""
     band_md += "</table>"
 
     # Legend
-    band_md += """
-    <div style='margin-top:10px; font-size:10px; color:#3a4458; line-height:1.8'>
+    band_md += f"""
+    <div style='margin-top:10px; font-size:10px; color:{P['text_faint']}; line-height:1.8'>
       <span style='color:#00e676'>■</span> Excellent &nbsp;
       <span style='color:#69f0ae'>■</span> Good &nbsp;
       <span style='color:#ffc107'>■</span> Fair<br>
@@ -616,21 +687,18 @@ with col_bands:
       <span style='color:#ef5350'>■</span> Closed &nbsp;
       <span style='color:#607d8b'>■</span> N/A
     </div>
-    <div style='margin-top:6px; font-size:9px; color:#2a3040'>
-      Hover row for detail · foF2={fof2_str} MHz · MUF(3000)={muf_str} MHz
+    <div style='margin-top:6px; font-size:9px; color:{P['text_faint']}'>
+      Hover row for detail · foF2={f"{fof2:.2f}" if fof2 else "—"} MHz · MUF(3000)={f"{mufd:.1f}" if mufd else "—"} MHz
     </div>
     </div>
-    """.format(
-        fof2_str=f"{fof2:.2f}" if fof2 else "—",
-        muf_str=f"{mufd:.1f}" if mufd else "—",
-    )
+    """
     st.html(band_md)
 
-    st.html("""
-<details style="font-family:Space Mono,monospace;font-size:11px;color:#c8d3e0;
-  background:#151821;padding:8px 12px;border-radius:4px;border:1px solid #2a2f3e;
+    st.html(f"""
+<details style="font-family:Space Mono,monospace;font-size:11px;color:{P['text']};
+  background:{P['card_bg']};padding:8px 12px;border-radius:4px;border:1px solid {P['border']};
   margin-top:4px;line-height:1.65">
-<summary style="cursor:pointer;color:#3a8fbf;font-size:11px;
+<summary style="cursor:pointer;color:{P['accent']};font-size:11px;
   letter-spacing:.05em;padding:2px 0;user-select:none">ⓘ How to read band conditions</summary>
 <div style="margin-top:8px">
 <p><b>NVIS</b> — Regional 0–500 km. Signal goes nearly vertical, reflects off F2, returns nearby.
@@ -658,8 +726,8 @@ with col_chart:
             fig.add_trace(go.Scatter(
                 x=df["time"], y=df["foF2"],
                 name="foF2 (MHz)",
-                line=dict(color="#3a8fbf", width=2),
-                fill="tozeroy", fillcolor="rgba(58,143,191,0.08)",
+                line=dict(color=P["accent"], width=2),
+                fill="tozeroy", fillcolor=f"rgba(58,143,191,0.08)",
             ))
 
         if "MUFD" in df.columns:
@@ -674,20 +742,20 @@ with col_chart:
         # Band frequency reference lines
         for band, freq in [("20m", 14.2), ("40m", 7.1), ("10m", 28.5)]:
             fig.add_hline(
-                y=freq, line_dash="dash", line_color="#2a2f3e",
+                y=freq, line_dash="dash", line_color=P["border"],
                 annotation_text=band, annotation_position="right",
-                annotation_font=dict(color="#3a4458", size=10),
+                annotation_font=dict(color=P["text_faint"], size=10),
             )
 
         fig.update_layout(
-            paper_bgcolor="#0d0f14",
-            plot_bgcolor="#151821",
-            font=dict(family="Space Mono, monospace", color="#c8d3e0", size=11),
-            legend=dict(bgcolor="#151821", bordercolor="#2a2f3e", borderwidth=1),
+            paper_bgcolor=P["plot_paper"],
+            plot_bgcolor=P["plot_bg"],
+            font=dict(family="Space Mono, monospace", color=P["text"], size=11),
+            legend=dict(bgcolor=P["card_bg"], bordercolor=P["border"], borderwidth=1),
             margin=dict(l=0, r=60, t=10, b=40),
             height=300,
-            xaxis=dict(gridcolor="#1e2535", showgrid=True, title=None),
-            yaxis=dict(gridcolor="#1e2535", showgrid=True, title="MHz"),
+            xaxis=dict(gridcolor=P["grid"], showgrid=True, title=None),
+            yaxis=dict(gridcolor=P["grid"], showgrid=True, title="MHz"),
             hovermode="x unified",
         )
         st.plotly_chart(fig, use_container_width=True)
@@ -696,68 +764,43 @@ with col_chart:
 
 
 # ──────────────────────────────────────────────────────────────
-# ROW 4: Kp history sparkline + ionosonde details
+# ROW 4: Kp history sparkline
 # ──────────────────────────────────────────────────────────────
 
-col_kp, col_raw = st.columns([2, 1])
+st.markdown("<div class='section-header'>Kp History (last 96 min)</div>", unsafe_allow_html=True)
+if kp_data and kp_data.get("history"):
+    kp_hist = kp_data["history"]
+    kp_df = pd.DataFrame(kp_hist)
+    kp_df = kp_df.dropna(subset=["kp"])
 
-with col_kp:
-    st.markdown("<div class='section-header'>Kp History (last 96 min)</div>", unsafe_allow_html=True)
-    if kp_data and kp_data.get("history"):
-        kp_hist = kp_data["history"]
-        kp_df = pd.DataFrame(kp_hist)
-        kp_df = kp_df.dropna(subset=["kp"])
+    def kp_bar_color(k):
+        if k >= 5: return "#ef5350"
+        if k >= 3: return "#ffc107"
+        return "#00e676"
 
-        def kp_bar_color(k):
-            if k >= 5: return "#ef5350"
-            if k >= 3: return "#ffc107"
-            return "#00e676"
+    colors = [kp_bar_color(k) for k in kp_df["kp"]]
 
-        colors = [kp_bar_color(k) for k in kp_df["kp"]]
-
-        fig2 = go.Figure(go.Bar(
-            x=kp_df["time"],
-            y=kp_df["kp"],
-            marker_color=colors,
-            name="Kp",
-        ))
-        fig2.add_hline(y=5, line_dash="dash", line_color="#ef5350",
-                       annotation_text="G1 storm", annotation_font=dict(color="#ef5350", size=10))
-        fig2.update_layout(
-            paper_bgcolor="#0d0f14",
-            plot_bgcolor="#151821",
-            font=dict(family="Space Mono, monospace", color="#c8d3e0", size=11),
-            margin=dict(l=0, r=20, t=10, b=40),
-            height=200,
-            yaxis=dict(range=[0, 9], gridcolor="#1e2535", title="Kp"),
-            xaxis=dict(gridcolor="#1e2535", title=None),
-            showlegend=False,
-        )
-        st.plotly_chart(fig2, use_container_width=True)
-    else:
-        st.info("Kp data unavailable.")
-
-with col_raw:
-    st.markdown("<div class='section-header'>Raw Ionosonde Values</div>", unsafe_allow_html=True)
-    if latest_iono:
-        rows = []
-        for k, v in latest_iono.items():
-            if k == "time":
-                rows.append({"Parameter": "Time (UTC)", "Value": str(v)[:19]})
-            else:
-                rows.append({"Parameter": k, "Value": fmt(v) if v is not None else "—"})
-        df_raw = pd.DataFrame(rows)
-        st.dataframe(df_raw, hide_index=True, use_container_width=True,
-                     column_config={"Parameter": st.column_config.TextColumn(width="medium"),
-                                    "Value": st.column_config.TextColumn(width="small")})
-    else:
-        st.warning(f"No data from {station}. Station may be offline or GIRO unreachable.")
-        st.markdown("""
-        **Manual check:**
-        ```
-        curl "https://lgdc.uml.edu/common/DIDBGetValues?ursiCode=IF843&charName=foF2,MUFD,MD,D&DMUF=3000&date1=2026-05-28T15:00:00Z&date2=2026-05-28T18:00:00Z"
-        ```
-        """)
+    fig2 = go.Figure(go.Bar(
+        x=kp_df["time"],
+        y=kp_df["kp"],
+        marker_color=colors,
+        name="Kp",
+    ))
+    fig2.add_hline(y=5, line_dash="dash", line_color="#ef5350",
+                   annotation_text="G1 storm", annotation_font=dict(color="#ef5350", size=10))
+    fig2.update_layout(
+        paper_bgcolor=P["plot_paper"],
+        plot_bgcolor=P["plot_bg"],
+        font=dict(family="Space Mono, monospace", color=P["text"], size=11),
+        margin=dict(l=0, r=20, t=10, b=40),
+        height=200,
+        yaxis=dict(range=[0, 9], gridcolor=P["grid"], title="Kp"),
+        xaxis=dict(gridcolor=P["grid"], title=None),
+        showlegend=False,
+    )
+    st.plotly_chart(fig2, use_container_width=True)
+else:
+    st.info("Kp data unavailable.")
 
 # ──────────────────────────────────────────────────────────────
 # Footer
@@ -765,7 +808,7 @@ with col_raw:
 
 st.markdown("---")
 st.markdown(
-    f"<div style='font-size:10px; color:#3a4458; font-family: Space Mono, monospace;'>"
+    f"<div style='font-size:10px; color:{P['text_faint']}; font-family: Space Mono, monospace;'>"
     f"AK6MJ · Freeland WA CN88 · HF Dashboard · "
     f"GIRO DIDBase (CC-BY-NC-SA 4.0) · NOAA SWPC · IF843 −40 min solar offset · "
     f"Generated {utc_now.strftime('%Y-%m-%dT%H:%MZ')}"
