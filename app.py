@@ -285,33 +285,40 @@ elif not latest_iono:
 # Propagation summary — plain-English for the operator
 # ──────────────────────────────────────────────────────────────
 
-def propagation_summary(fof2, mufd, kp, sfi, bz, xray_cls, utc_now):
+def propagation_summary(fof2, mufd, kp, sfi, bz, xray_cls, utc_now, bands=None):
     """Return a 2-3 sentence operator-facing summary of current conditions."""
     sentences = []
 
-    # ── NVIS / regional sentence ──────────────────────────────
-    # CN88 local solar noon ≈ 20:30 UTC; dawn ≈ 13:30 UTC, dusk ≈ 03:30 UTC
-    local_h = (utc_now.hour + (utc_now.minute / 60) - 7) % 24   # PDT offset
+    # ── NVIS / regional sentence — derived from actual band grades ──
+    local_h = (utc_now.hour + (utc_now.minute / 60) - 7) % 24   # PDT
     is_day = 6 < local_h < 20
 
-    if fof2 is not None:
-        if fof2 >= 8.0:
-            nvis = "40m, 60m, and even 30m are wide open for NVIS"
-        elif fof2 >= 6.5:
-            nvis = "40m and 60m are solid for NVIS regional work"
-        elif fof2 >= 5.0:
-            nvis = "60m is the pick for NVIS; 40m is workable but marginal"
-        elif fof2 >= 3.5:
-            nvis = "80m is your best NVIS band; 40m is losing its ceiling"
-        elif fof2 >= 2.0:
-            nvis = "NVIS is limited to 80m — F2 layer is thin"
+    if bands:
+        nvis_open = [b["band"] for b in bands
+                     if b.get("nvis_grade", 0) >= 4]   # Excellent or Good
+        nvis_fair  = [b["band"] for b in bands
+                     if b.get("nvis_grade", 0) == 3]   # Fair
+        if nvis_open:
+            best = nvis_open[-1]   # highest-freq good NVIS band
+            if len(nvis_open) >= 3:
+                nvis = f"{', '.join(nvis_open)} all good for NVIS regional work"
+            elif len(nvis_open) == 2:
+                nvis = f"{nvis_open[0]} and {nvis_open[1]} are solid for NVIS"
+            else:
+                nvis = f"{best} is the best NVIS band right now"
+        elif nvis_fair:
+            nvis = f"{nvis_fair[-1]} is marginal for NVIS — conditions are degraded"
+        elif fof2 is not None:
+            nvis = "NVIS is poor on all bands — F2 layer is thin or storm-suppressed"
         else:
-            nvis = "F2 layer has collapsed — NVIS unreliable on all bands"
+            nvis = None
 
-        if not is_day:
-            nvis += "; 80m strengthening as the layer thins overnight"
-
-        sentences.append(nvis + ".")
+        if nvis:
+            if not is_day:
+                nvis += "; 80m strengthening overnight"
+            sentences.append(nvis + ".")
+    elif fof2 is not None:
+        sentences.append("Ionospheric data available but band grades not computed.")
 
     # ── DX / skip sentence ────────────────────────────────────
     if mufd is not None:
@@ -966,7 +973,7 @@ else:
 
 _summary = propagation_summary(fof2, mufd, kp_val, sfi_val, wind_bz,
                                xray_data.get("class") if xray_data else None,
-                               utc_now)
+                               utc_now, bands=bands)
 
 _wx_blurb = ""
 if wx_data:
