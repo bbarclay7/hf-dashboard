@@ -554,8 +554,15 @@ st.html(f"""
 <p><b>SFI</b> — Solar Flux Index (F10.7 cm). Primary long-term driver of foF2 and MUF.
 <br>~70: solar minimum &nbsp;|&nbsp; 150+: solar maximum. Each +10 sfu ≈ +0.5–1 MHz to foF2.
 <a href="https://www.swpc.noaa.gov/phenomena/f107-cm-radio-emissions" target="_blank" style="color:{P['accent']}">NOAA F10.7</a></p>
-<p><b>Bz</b> — Solar wind Z-field (DSCOVR, ~1 hr upstream). <b>Negative = southward</b> = couples
-into magnetosphere → storm. Bz &lt; −5 nT sustained: watch for rising Kp over next 1–3 hrs.</p>
+<p><b>Bz</b> — IMF Z-component (DSCOVR satellite, ~1 hr upstream of Earth).
+Earth's magnetic field points northward at the magnetopause. When Bz is <b>southward (negative)</b>,
+it opposes Earth's field and the two fields reconnect — opening a door for solar wind energy to pour
+into the magnetosphere. This drives the ring current, heats the ionosphere, and raises Kp.
+<b>Bz &gt; −5 nT</b>: background, ignore.
+<b>−5 to −10 nT sustained</b>: watch — Kp likely rising over next 1–3 hrs, HF grades will drop.
+<b>&lt; −10 nT</b>: storm developing — absorption on polar paths (CN88 is vulnerable above 14 MHz),
+possible HF blackout at high latitudes.
+Positive Bz = northward = field lines don't connect = no storm regardless of magnitude.</p>
 <p><b>X-ray</b> — GOES flare flux. Causes sudden D-region absorption on the sunlit side.
 <br>A/B: none &nbsp;|&nbsp; C: minor &nbsp;|&nbsp; M: 1–2 grade penalty &nbsp;|&nbsp; X: possible blackout.
 <a href="https://www.swpc.noaa.gov/phenomena/solar-flares-radio-blackouts" target="_blank" style="color:{P['accent']}">NOAA flares</a></p>
