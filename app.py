@@ -398,7 +398,7 @@ xray_flux = xray_data.get("flux") if xray_data else None
 # Needle positions (0–100%) for TOS gauges
 _kp_pct  = min(100, max(0, (kp_val  or 0) / 9 * 100))                                  if kp_val   is not None else None
 _sfi_pct = min(100, max(0, ((sfi_val or 65) - 65) / 155 * 100))                        if sfi_val  is not None else None
-_bz_pct  = min(100, max(0, ((wind_bz or 0) + 25) / 35 * 100))                          if wind_bz  is not None else None
+_bz_pct  = min(100, max(0, ((wind_bz or 0) + 25) / 50 * 100))                          if wind_bz  is not None else None
 _xr_pct  = min(100, max(0, (math.log10(max(xray_flux, 1e-9)) + 9) / 5 * 100))          if xray_flux else None
 
 
@@ -509,8 +509,8 @@ with c7:
     _spd_str  = f"{fmt(wind_spd, 0)} km/s" if wind_spd is not None else "— km/s"
     st.markdown(_tos_gauge(
         pct=_bz_pct, value_str=fmt(wind_bz), unit_str=f"nT  {_spd_str}", label_str="SOLAR WIND",
-        segments=[(0, 43, "#ef5350"), (43, 71, "#ffc107"), (71, 100, "#00e676")],
-        tick_labels=[(0, "-25"), (43, "-10"), (71, "0"), (100, "+10")],
+        segments=[(0, 30, "#ef5350"), (30, 50, "#ffc107"), (50, 100, "#00e676")],
+        tick_labels=[(0, "-25"), (30, "-10"), (50, "0"), (100, "+25")],
         tooltip="Solar wind Bz from DSCOVR (~1 hr upstream). Bz negative = southward field couples to Earth magnetosphere, storm develops. Bz < -5 nT sustained: watch for rising Kp.",
         value_color=_bz_color,
         palette=P,
