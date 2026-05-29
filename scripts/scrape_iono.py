@@ -41,8 +41,8 @@ CROP_BOX = (0, 35, 165, 490)
 def fetch_latest_ionogram(station: str) -> tuple[bytes | None, str | None, int | None]:
     """Return (image_bytes, iso_timestamp, mid) for the most recent ionogram."""
     now = datetime.now(timezone.utc)
-    from_date = (now - timedelta(days=1)).strftime("%Y.%m.%d")
-    to_date = now.strftime("%Y.%m.%d")
+    from_date = now.strftime("%Y.%m.%d")
+    to_date = (now + timedelta(days=1)).strftime("%Y.%m.%d")
     try:
         r = requests.get(
             IONOWEB_LIST,
