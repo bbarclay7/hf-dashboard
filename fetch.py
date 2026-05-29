@@ -428,30 +428,25 @@ def fetch_sfi_from_wwv() -> Optional[dict]:
 
 
 def fetch_solar_wind() -> Optional[dict]:
-    """Return latest solar wind speed and Bz from DSCOVR."""
+    """Return latest solar wind speed and Bz from DSCOVR.
+    Speed comes from rtsw_wind_1m; Bz from mag-field summary. Merged."""
     cached = _noaa_cache_get("noaa_wind")
     if cached:
         return cached
-    # Primary: 1-min RTSW feed has both speed and Bz
+
+    speed, bz, bt, ts = None, None, None, None
+
     try:
         r = requests.get(f"{SWPC_BASE}/json/rtsw/rtsw_wind_1m.json", timeout=TIMEOUT)
         r.raise_for_status()
         data = r.json()
         if data:
             last = data[-1]
-            if isinstance(last, dict):
-                result = {
-                    "speed": last.get("proton_speed"),
-                    "bz":    last.get("bz_gsm"),
-                    "bt":    last.get("bt"),
-                    "time":  last.get("time_tag"),
-                }
-                _noaa_cache_put("noaa_wind", result)
-                return result
+            speed = last.get("proton_speed")
+            ts    = last.get("time_tag")
     except Exception as e:
-        log.warning("Solar wind rtsw fetch failed: %s", e)
+        log.warning("Solar wind speed fetch failed: %s", e)
 
-    # Fallback: mag-field summary (Bz only, no speed)
     try:
         r = requests.get(
             f"{SWPC_BASE}/products/summary/solar-wind-mag-field.json", timeout=TIMEOUT
@@ -459,17 +454,16 @@ def fetch_solar_wind() -> Optional[dict]:
         r.raise_for_status()
         data = r.json()
         last = data[-1] if isinstance(data, list) else data
-        if isinstance(last, dict):
-            result = {
-                "speed": None,
-                "bz":    last.get("bz_gsm") or last.get("Bz"),
-                "bt":    last.get("bt")     or last.get("Bt"),
-                "time":  last.get("time_tag") or last.get("TimeStamp"),
-            }
-            _noaa_cache_put("noaa_wind", result)
-            return result
-    except Exception as e2:
-        log.warning("Solar wind mag-field fetch failed: %s", e2)
+        bz = last.get("bz_gsm") or last.get("Bz")
+        bt = last.get("bt")     or last.get("Bt")
+        ts = ts or last.get("time_tag") or last.get("TimeStamp")
+    except Exception as e:
+        log.warning("Solar wind Bz fetch failed: %s", e)
+
+    if speed is not None or bz is not None:
+        result = {"speed": speed, "bz": bz, "bt": bt, "time": ts}
+        _noaa_cache_put("noaa_wind", result)
+        return result
 
     return _noaa_cache_get("noaa_wind", max_age_sec=86400)
 

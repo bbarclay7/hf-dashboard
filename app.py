@@ -83,7 +83,7 @@ _PALETTES = {
     },
 }
 
-theme = st.query_params.get("theme", "dark")
+theme = st.query_params.get("colormode", "dark")
 if theme not in _PALETTES:
     theme = "dark"
 P = _PALETTES[theme]
@@ -198,7 +198,7 @@ with st.sidebar:
     _other_theme = "light" if theme == "dark" else "dark"
     _toggle_label = "☀️ Light mode" if theme == "dark" else "🌙 Dark mode"
     if st.button(_toggle_label, use_container_width=True):
-        st.query_params["theme"] = _other_theme
+        st.query_params["colormode"] = _other_theme
         st.rerun()
 
     refresh_interval = st.select_slider(
@@ -851,6 +851,6 @@ st.markdown(
 if refresh_interval > 0:
     time.sleep(0.5)
     st.markdown(
-        f"<meta http-equiv='refresh' content='{refresh_interval};url=?theme={theme}'>",
+        f"<meta http-equiv='refresh' content='{refresh_interval};url=?colormode={theme}'>",
         unsafe_allow_html=True,
     )
