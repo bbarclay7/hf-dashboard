@@ -668,8 +668,8 @@ with col_bands:
         dx_lbl     = b["dx_label"]
         freq       = b["freq_mhz"]
         # N/A bands get muted style
-        nvis_style = f"color:{nvis_color}" if nvis_lbl not in ("N/A", "Unknown") else f"color:{P['border']}"
-        dx_style   = f"color:{dx_color}"   if dx_lbl   not in ("N/A", "Unknown") else f"color:{P['border']}"
+        nvis_style = f"color:{nvis_color}" if nvis_lbl not in ("N/A", "Unknown") else f"color:{P['text_dim']}"
+        dx_style   = f"color:{dx_color}"   if dx_lbl   not in ("N/A", "Unknown") else f"color:{P['text_dim']}"
         # Short note for the visible NOTE column
         if mufd and fof2 and freq > fof2 and freq <= mufd * 1.05:
             _md = mufd / fof2
