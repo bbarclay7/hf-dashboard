@@ -850,6 +850,6 @@ st.markdown(
 if refresh_interval > 0:
     time.sleep(0.5)
     st.markdown(
-        f"<meta http-equiv='refresh' content='{refresh_interval}'>",
+        f"<meta http-equiv='refresh' content='{refresh_interval};url=?theme={theme}'>",
         unsafe_allow_html=True,
     )

@@ -397,37 +397,40 @@ def fetch_sfi_from_wwv() -> Optional[dict]:
 
 def fetch_solar_wind() -> Optional[dict]:
     """Return latest solar wind speed and Bz from DSCOVR."""
-    url = f"{SWPC_BASE}/products/summary/solar-wind-mag-field.json"
+    # Primary: 1-min RTSW feed has both speed and Bz
     try:
-        r = requests.get(url, timeout=TIMEOUT)
-        r.raise_for_status()
-        d = r.json()
-        return {
-            "speed": d.get("WindSpeed"),
-            "bz": d.get("Bz"),
-            "bt": d.get("Bt"),
-            "time": d.get("TimeStamp"),
-        }
-    except Exception as e:
-        log.warning("Solar wind fetch failed: %s", e)
-
-    # Try alternate endpoint
-    url2 = f"{SWPC_BASE}/json/rtsw/rtsw_wind_1m.json"
-    try:
-        r = requests.get(url2, timeout=TIMEOUT)
+        r = requests.get(f"{SWPC_BASE}/json/rtsw/rtsw_wind_1m.json", timeout=TIMEOUT)
         r.raise_for_status()
         data = r.json()
         if data:
             last = data[-1]
             if isinstance(last, dict):
                 return {
-                    "speed": last.get("proton_speed") or last.get("speed"),
-                    "bz": last.get("bz_gsm") or last.get("bz"),
-                    "bt": last.get("bt"),
-                    "time": last.get("time_tag"),
+                    "speed": last.get("proton_speed"),
+                    "bz":    last.get("bz_gsm"),
+                    "bt":    last.get("bt"),
+                    "time":  last.get("time_tag"),
                 }
+    except Exception as e:
+        log.warning("Solar wind rtsw fetch failed: %s", e)
+
+    # Fallback: mag-field summary (Bz only, no speed)
+    try:
+        r = requests.get(
+            f"{SWPC_BASE}/products/summary/solar-wind-mag-field.json", timeout=TIMEOUT
+        )
+        r.raise_for_status()
+        data = r.json()
+        last = data[-1] if isinstance(data, list) else data
+        if isinstance(last, dict):
+            return {
+                "speed": None,
+                "bz":    last.get("bz_gsm") or last.get("Bz"),
+                "bt":    last.get("bt")     or last.get("Bt"),
+                "time":  last.get("time_tag") or last.get("TimeStamp"),
+            }
     except Exception as e2:
-        log.warning("Solar wind alt fetch failed: %s", e2)
+        log.warning("Solar wind mag-field fetch failed: %s", e2)
 
     return None
 
