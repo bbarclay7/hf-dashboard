@@ -233,16 +233,14 @@ with st.spinner("Fetching data..."):
 
 utc_now = datetime.now(timezone.utc)
 
-# Show stale-data banner if ionosonde is from disk cache
+# Only warn if data is genuinely stale (>30 min) or missing entirely
 if latest_iono and latest_iono.get("_cached"):
-    _age = latest_iono.get("_cache_age_min", 0)
-    _age_str = f"{_age // 60}h {_age % 60}m" if _age >= 60 else f"{_age}m"
-    st.warning(
-        f"⚠️ GIRO ionosonde API unreachable — showing cached data ({_age_str} old). "
-        f"Live values unavailable until the service recovers."
-    )
+    _age = latest_iono.get("_cache_age_min") or 0
+    if _age > 30:
+        _age_str = f"{_age // 60}h {_age % 60}m" if _age >= 60 else f"{_age}m"
+        st.warning(f"⚠️ Ionosonde data is {_age_str} old — pipeline may be stalled.")
 elif not latest_iono:
-    st.warning("⚠️ GIRO ionosonde API unreachable and no cached data available.")
+    st.warning("⚠️ No ionosonde data available.")
 
 
 # ──────────────────────────────────────────────────────────────

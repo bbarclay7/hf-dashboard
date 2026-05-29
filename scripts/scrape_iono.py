@@ -97,18 +97,26 @@ def extract_values(image_bytes: bytes) -> dict:
     # Binarize: the text is dark on white, threshold at 128
     panel = panel.point(lambda p: 0 if p < 128 else 255, "1")
 
-    text = pytesseract.image_to_string(
-        panel, config="--psm 6 --oem 1 -c tessedit_char_whitelist=foF12EesMUDdhmyBCvst().0123456789- "
-    )
+    # No character whitelist — parentheses in labels like MUF(D) confuse it
+    text = pytesseract.image_to_string(panel, config="--psm 6 --oem 1")
 
     def grab(pattern: str) -> float | None:
         m = re.search(pattern + r"[\s:]+([0-9]+(?:\.[0-9]+)?)", text, re.IGNORECASE)
         return float(m.group(1)) if m else None
 
+    fof2 = grab(r"foF2")
+    # MUF(D) label — parentheses may be dropped or mangled by OCR
+    mufd = grab(r"MUF\s*\(?D\)?") or grab(r"MUFD")
+    md   = grab(r"M\s*\(?D\)?")   or grab(r"\bMD\b")
+
+    # Fallback: compute MUF from foF2 × M(D) when OCR misses it
+    if mufd is None and fof2 and md:
+        mufd = round(fof2 * md, 3)
+
     return {
-        "foF2": grab(r"foF2"),
-        "MUFD": grab(r"MUF\(D\)") or grab(r"MUFD"),
-        "MD":   grab(r"M\(D\)")   or grab(r"\bMD\b"),
+        "foF2": round(fof2, 3) if fof2 else None,
+        "MUFD": round(mufd, 3) if mufd else None,
+        "MD":   round(md,   2) if md   else None,
     }
 
 
