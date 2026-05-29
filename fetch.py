@@ -23,7 +23,8 @@ TIMEOUT = 12  # seconds
 # Disk cache — survives API outages and limits live query rate
 # ──────────────────────────────────────────────────────────────
 
-_CACHE_DIR = Path(__file__).parent / ".cache"
+_CACHE_DIR  = Path(__file__).parent / ".cache"
+_DATA_DIR   = Path(__file__).parent / "data"
 
 
 def _cache_save(key: str, text: str) -> None:
@@ -45,6 +46,62 @@ def _cache_load(key: str) -> tuple[Optional[str], Optional[datetime]]:
         except Exception:
             pass
     return None, None
+
+
+def _load_scraped_latest(station: str) -> Optional[dict]:
+    """Load the latest reading from the locally-scraped data/iono_cache.json."""
+    f = _DATA_DIR / "iono_cache.json"
+    if not f.exists():
+        return None
+    try:
+        d = json.loads(f.read_text())
+        if d.get("station") != station or d.get("foF2") is None:
+            return None
+        fetched_at = d.get("fetched_at")
+        age_min = None
+        if fetched_at:
+            saved_at = datetime.fromisoformat(fetched_at)
+            age_min = int((datetime.now(timezone.utc) - saved_at).total_seconds() / 60)
+        ts = d.get("time")
+        obs_time = datetime.fromisoformat(ts.replace("Z", "+00:00")) if ts else None
+        return {
+            "time":           obs_time,
+            "foF2":           d.get("foF2"),
+            "MUFD":           d.get("MUFD"),
+            "MD":             d.get("MD"),
+            "D":              d.get("D"),
+            "_cached":        True,
+            "_cache_age_min": age_min,
+            "_source":        "cron",
+        }
+    except Exception as e:
+        log.debug("Scraped latest load failed: %s", e)
+        return None
+
+
+def _load_scraped_history(station: str) -> list[dict]:
+    """Load the rolling history from data/iono_history.json."""
+    f = _DATA_DIR / "iono_history.json"
+    if not f.exists():
+        return []
+    try:
+        rows = json.loads(f.read_text())
+        result = []
+        for r in rows:
+            ts = r.get("time")
+            if ts is None:
+                continue
+            obs_time = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+            result.append({
+                "time": obs_time,
+                "foF2": r.get("foF2"),
+                "MUFD": r.get("MUFD"),
+                "MD":   r.get("MD"),
+            })
+        return result
+    except Exception as e:
+        log.debug("Scraped history load failed: %s", e)
+        return []
 
 
 # ──────────────────────────────────────────────────────────────
@@ -95,7 +152,12 @@ def fetch_ionosonde(
     except Exception as e:
         log.warning("GIRO fetch failed: %s", e)
 
-    # Fall back to disk cache
+    # Fallback 1: locally-scraped JSON from cron (data/iono_cache.json)
+    scraped = _load_scraped_latest(station)
+    if scraped:
+        return scraped
+
+    # Fallback 2: old GIRO text cache from last time the API worked
     cached_text, saved_at = _cache_load(cache_key)
     if cached_text:
         result = _parse_giro_text(cached_text, chars)
@@ -103,7 +165,7 @@ def fetch_ionosonde(
             age_min = int((now - saved_at).total_seconds() / 60)
             result["_cached"] = True
             result["_cache_age_min"] = age_min
-            log.info("Using cached ionosonde data (%d min old)", age_min)
+            log.info("Using GIRO text cache (%d min old)", age_min)
             return result
     return None
 
@@ -141,10 +203,15 @@ def fetch_ionosonde_history(
     except Exception as e:
         log.warning("GIRO history fetch failed: %s", e)
 
-    # Fall back to disk cache
+    # Fallback 1: locally-scraped history JSON from cron
+    scraped = _load_scraped_history(station)
+    if scraped:
+        return scraped
+
+    # Fallback 2: old GIRO text cache
     cached_text, saved_at = _cache_load(cache_key)
     if cached_text:
-        log.info("Using cached ionosonde history (saved %s)", saved_at)
+        log.info("Using GIRO text cache for history (saved %s)", saved_at)
         return _parse_giro_text_all(cached_text, chars)
     return []
 
