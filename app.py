@@ -953,11 +953,14 @@ _summary = propagation_summary(fof2, mufd, kp_val, sfi_val, wind_bz,
 
 _wx_blurb = ""
 if wx_data:
-    _wx_blurb = (f"{wx_data['label']}. "
-                 f"Wind {wx_data['max_wind']} mph, gusts to {wx_data['max_gust']} mph "
-                 f"over the next 24 h.")
+    _temp = f"{wx_data['temp_now']}°F" if wx_data.get('temp_now') is not None else ""
+    _hilo = ""
+    if wx_data.get('hi_today') and wx_data.get('lo_today'):
+        _hilo = f" H {wx_data['hi_today']}° / L {wx_data['lo_today']}°."
+    _wx_blurb = (f"{wx_data['label']}, {_temp}.{_hilo} "
+                 f"Wind {wx_data['max_wind']} mph, gusts to {wx_data['max_gust']} mph.")
     if wx_data['max_precip'] > 30:
-        _wx_blurb += f" Precipitation likely ({wx_data['max_precip']}%)."
+        _wx_blurb += f" Rain chance {wx_data['max_precip']}%."
 
 _full_summary = " ".join(s for s in [_summary, _wx_blurb] if s)
 if _full_summary:
