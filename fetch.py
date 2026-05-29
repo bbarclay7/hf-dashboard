@@ -48,6 +48,22 @@ def _cache_load(key: str) -> tuple[Optional[str], Optional[datetime]]:
     return None, None
 
 
+def _noaa_cache_get(key: str, max_age_sec: int = 300) -> Optional[dict]:
+    """Return cached NOAA result if fresh enough, else None."""
+    text, saved_at = _cache_load(key)
+    if text and saved_at:
+        if (datetime.now(timezone.utc) - saved_at).total_seconds() < max_age_sec:
+            try:
+                return json.loads(text)
+            except Exception:
+                pass
+    return None
+
+
+def _noaa_cache_put(key: str, data: dict) -> None:
+    _cache_save(key, json.dumps(data))
+
+
 def _load_scraped_latest(station: str) -> Optional[dict]:
     """Load the latest reading from the locally-scraped data/iono_cache.json."""
     f = _DATA_DIR / "iono_cache.json"
@@ -302,6 +318,9 @@ SWPC_BASE = "https://services.swpc.noaa.gov"
 
 def fetch_kp() -> Optional[dict]:
     """Return most recent Kp estimate and a short history list."""
+    cached = _noaa_cache_get("noaa_kp")
+    if cached:
+        return cached
     url = f"{SWPC_BASE}/json/planetary_k_index_1m.json"
     try:
         r = requests.get(url, timeout=TIMEOUT)
@@ -335,14 +354,19 @@ def fetch_kp() -> Optional[dict]:
                     "kp": float(_kp) if _kp is not None else 0.0,
                 })
 
-        return {"kp": kp_val, "time": time_str, "history": history}
+        result = {"kp": kp_val, "time": time_str, "history": history}
+        _noaa_cache_put("noaa_kp", result)
+        return result
     except Exception as e:
         log.warning("Kp fetch failed: %s", e)
-        return None
+        return _noaa_cache_get("noaa_kp", max_age_sec=86400)
 
 
 def fetch_sfi() -> Optional[dict]:
     """Return latest F10.7 solar flux index."""
+    cached = _noaa_cache_get("noaa_sfi", max_age_sec=3600)  # SFI updates ~daily
+    if cached:
+        return cached
     url = f"{SWPC_BASE}/json/f107_cm_flux.json"
     try:
         r = requests.get(url, timeout=TIMEOUT)
@@ -352,17 +376,25 @@ def fetch_sfi() -> Optional[dict]:
             return None
         last = data[-1]
         if isinstance(last, list):
-            return {"sfi": float(last[1]), "time": last[0]}
+            result = {"sfi": float(last[1]), "time": last[0]}
         elif isinstance(last, dict):
-            return {
+            result = {
                 "sfi": float(last.get("flux") or last.get("f107") or 0),
                 "time": last.get("time_tag") or last.get("time"),
             }
+        else:
+            result = None
+        if result:
+            _noaa_cache_put("noaa_sfi", result)
+            return result
     except Exception as e:
         log.warning("SFI fetch failed: %s", e)
 
-    # Fallback: parse WWV geophysical alert text
-    return fetch_sfi_from_wwv()
+    wwv = fetch_sfi_from_wwv()
+    if wwv:
+        _noaa_cache_put("noaa_sfi", wwv)
+        return wwv
+    return _noaa_cache_get("noaa_sfi", max_age_sec=86400)
 
 
 def fetch_sfi_from_wwv() -> Optional[dict]:
@@ -397,6 +429,9 @@ def fetch_sfi_from_wwv() -> Optional[dict]:
 
 def fetch_solar_wind() -> Optional[dict]:
     """Return latest solar wind speed and Bz from DSCOVR."""
+    cached = _noaa_cache_get("noaa_wind")
+    if cached:
+        return cached
     # Primary: 1-min RTSW feed has both speed and Bz
     try:
         r = requests.get(f"{SWPC_BASE}/json/rtsw/rtsw_wind_1m.json", timeout=TIMEOUT)
@@ -405,12 +440,14 @@ def fetch_solar_wind() -> Optional[dict]:
         if data:
             last = data[-1]
             if isinstance(last, dict):
-                return {
+                result = {
                     "speed": last.get("proton_speed"),
                     "bz":    last.get("bz_gsm"),
                     "bt":    last.get("bt"),
                     "time":  last.get("time_tag"),
                 }
+                _noaa_cache_put("noaa_wind", result)
+                return result
     except Exception as e:
         log.warning("Solar wind rtsw fetch failed: %s", e)
 
@@ -423,20 +460,25 @@ def fetch_solar_wind() -> Optional[dict]:
         data = r.json()
         last = data[-1] if isinstance(data, list) else data
         if isinstance(last, dict):
-            return {
+            result = {
                 "speed": None,
                 "bz":    last.get("bz_gsm") or last.get("Bz"),
                 "bt":    last.get("bt")     or last.get("Bt"),
                 "time":  last.get("time_tag") or last.get("TimeStamp"),
             }
+            _noaa_cache_put("noaa_wind", result)
+            return result
     except Exception as e2:
         log.warning("Solar wind mag-field fetch failed: %s", e2)
 
-    return None
+    return _noaa_cache_get("noaa_wind", max_age_sec=86400)
 
 
 def fetch_xray() -> Optional[dict]:
     """Return latest GOES X-ray flux (for flare detection)."""
+    cached = _noaa_cache_get("noaa_xray")
+    if cached:
+        return cached
     url = f"{SWPC_BASE}/json/goes/primary/xrays-7-day.json"
     try:
         r = requests.get(url, timeout=TIMEOUT)
@@ -450,14 +492,16 @@ def fetch_xray() -> Optional[dict]:
         latest_long = long_[-1] if long_ else None
         if latest_long:
             flux = float(latest_long.get("flux", 0))
-            return {
+            result = {
                 "flux": flux,
                 "class": _xray_class(flux),
                 "time": latest_long.get("time_tag"),
             }
+            _noaa_cache_put("noaa_xray", result)
+            return result
     except Exception as e:
         log.warning("X-ray fetch failed: %s", e)
-    return None
+    return _noaa_cache_get("noaa_xray", max_age_sec=86400)
 
 
 def _xray_class(flux: float) -> str:
