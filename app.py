@@ -233,6 +233,17 @@ with st.spinner("Fetching data..."):
 
 utc_now = datetime.now(timezone.utc)
 
+# Show stale-data banner if ionosonde is from disk cache
+if latest_iono and latest_iono.get("_cached"):
+    _age = latest_iono.get("_cache_age_min", 0)
+    _age_str = f"{_age // 60}h {_age % 60}m" if _age >= 60 else f"{_age}m"
+    st.warning(
+        f"⚠️ GIRO ionosonde API unreachable — showing cached data ({_age_str} old). "
+        f"Live values unavailable until the service recovers."
+    )
+elif not latest_iono:
+    st.warning("⚠️ GIRO ionosonde API unreachable and no cached data available.")
+
 
 # ──────────────────────────────────────────────────────────────
 # Helper: format value with fallback

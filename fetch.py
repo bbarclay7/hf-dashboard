@@ -12,11 +12,39 @@ import re
 import json
 import logging
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from typing import Optional
 
 log = logging.getLogger(__name__)
 
 TIMEOUT = 12  # seconds
+
+# ──────────────────────────────────────────────────────────────
+# Disk cache — survives API outages and limits live query rate
+# ──────────────────────────────────────────────────────────────
+
+_CACHE_DIR = Path(__file__).parent / ".cache"
+
+
+def _cache_save(key: str, text: str) -> None:
+    _CACHE_DIR.mkdir(exist_ok=True)
+    (_CACHE_DIR / f"{key}.txt").write_text(text, encoding="utf-8")
+    (_CACHE_DIR / f"{key}.ts").write_text(
+        datetime.now(timezone.utc).isoformat(), encoding="utf-8"
+    )
+
+
+def _cache_load(key: str) -> tuple[Optional[str], Optional[datetime]]:
+    """Return (raw_text, saved_at) or (None, None) if no cache exists."""
+    txt = _CACHE_DIR / f"{key}.txt"
+    ts  = _CACHE_DIR / f"{key}.ts"
+    if txt.exists() and ts.exists():
+        try:
+            saved_at = datetime.fromisoformat(ts.read_text(encoding="utf-8").strip())
+            return txt.read_text(encoding="utf-8"), saved_at
+        except Exception:
+            pass
+    return None, None
 
 
 # ──────────────────────────────────────────────────────────────
@@ -40,11 +68,10 @@ def fetch_ionosonde(
     from ~40 min ago so the reading reflects current conditions at our QTH.
 
     Returns dict with keys matching the requested chars, plus 'time' (UTC datetime).
-    Returns None on failure.
+    On failure, returns last cached data with '_cached' and '_cache_age_min' set.
+    Returns None if no live data and no cache.
     """
     now = datetime.now(timezone.utc)
-    # Shift window back by solar_offset_min to get the sounding that reflects
-    # current local solar conditions (IF843 is ahead of us in solar time)
     effective_now = now - timedelta(minutes=solar_offset_min)
     t1 = (effective_now - timedelta(hours=hours_back)).strftime("%Y-%m-%dT%H:%M:%S.000Z")
     t2 = effective_now.strftime("%Y-%m-%dT%H:%M:%S.000Z")
@@ -57,14 +84,28 @@ def fetch_ionosonde(
         "date2": t2,
     }
 
+    cache_key = f"iono_latest_{station}"
     try:
         r = requests.get(GIRO_URL, params=params, timeout=TIMEOUT)
         r.raise_for_status()
+        result = _parse_giro_text(r.text, chars)
+        if result:
+            _cache_save(cache_key, r.text)
+            return result
     except Exception as e:
         log.warning("GIRO fetch failed: %s", e)
-        return None
 
-    return _parse_giro_text(r.text, chars)
+    # Fall back to disk cache
+    cached_text, saved_at = _cache_load(cache_key)
+    if cached_text:
+        result = _parse_giro_text(cached_text, chars)
+        if result:
+            age_min = int((now - saved_at).total_seconds() / 60)
+            result["_cached"] = True
+            result["_cache_age_min"] = age_min
+            log.info("Using cached ionosonde data (%d min old)", age_min)
+            return result
+    return None
 
 
 def fetch_ionosonde_history(
@@ -74,7 +115,8 @@ def fetch_ionosonde_history(
     solar_offset_min: int = 40,
 ) -> list[dict]:
     """Return all observations in the past N hours as a list of dicts.
-    Applies solar_offset_min so the window is aligned to local solar conditions."""
+    Applies solar_offset_min so the window is aligned to local solar conditions.
+    Falls back to disk cache if the live fetch fails."""
     now = datetime.now(timezone.utc)
     effective_now = now - timedelta(minutes=solar_offset_min)
     t1 = (effective_now - timedelta(hours=hours_back)).strftime("%Y-%m-%dT%H:%M:%S.000Z")
@@ -88,14 +130,23 @@ def fetch_ionosonde_history(
         "date2": t2,
     }
 
+    cache_key = f"iono_history_{station}"
     try:
         r = requests.get(GIRO_URL, params=params, timeout=TIMEOUT)
         r.raise_for_status()
+        rows = _parse_giro_text_all(r.text, chars)
+        if rows:
+            _cache_save(cache_key, r.text)
+            return rows
     except Exception as e:
         log.warning("GIRO history fetch failed: %s", e)
-        return []
 
-    return _parse_giro_text_all(r.text, chars)
+    # Fall back to disk cache
+    cached_text, saved_at = _cache_load(cache_key)
+    if cached_text:
+        log.info("Using cached ionosonde history (saved %s)", saved_at)
+        return _parse_giro_text_all(cached_text, chars)
+    return []
 
 
 def _parse_giro_text(text: str, chars: str) -> Optional[dict]:
