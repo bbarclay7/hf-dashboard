@@ -21,6 +21,8 @@ from fetch import (
     fetch_sfi,
     fetch_solar_wind,
     fetch_xray,
+    fetch_tides,
+    fetch_sky_tonight,
     estimate_band_conditions,
     BANDS,
 )
@@ -212,9 +214,10 @@ with st.sidebar:
     st.markdown("---")
     st.markdown("""
     **Data Sources**
-    - [GIRO DIDBase](https://giro.uml.edu) — Ionosonde
-    - [NOAA SWPC](https://www.swpc.noaa.gov) — Space weather
-    - Cadence: ~15 min (ionosonde), ~1 min (Kp)
+    - [GIRO IonoWeb](https://giro.uml.edu) — Ionosonde (OCR)
+    - [NOAA SWPC](https://www.swpc.noaa.gov) — Kp, SFI, wind, X-ray
+    - [NOAA Tides](https://tidesandcurrents.noaa.gov) — Port Townsend
+    - [Open-Meteo](https://open-meteo.com) — Sky forecast
     """)
 
     manual_refresh = st.button("🔄 Refresh Now", use_container_width=True)
@@ -241,6 +244,11 @@ def load_space_weather():
     return kp, sfi, wind, xray
 
 
+@st.cache_data(ttl=3600)  # 1-hour cache
+def load_tonight():
+    return fetch_tides(), fetch_sky_tonight()
+
+
 if manual_refresh:
     st.cache_data.clear()
 
@@ -248,6 +256,7 @@ if manual_refresh:
 with st.spinner("Fetching data..."):
     latest_iono, iono_history = load_ionosonde(station, hours_history)
     kp_data, sfi_data, wind_data, xray_data = load_space_weather()
+    tides_data, sky_data = load_tonight()
 
 utc_now = datetime.now(timezone.utc)
 
@@ -830,6 +839,116 @@ if kp_data and kp_data.get("history"):
 else:
     st.info("Kp data unavailable.")
 
+
+# ──────────────────────────────────────────────────────────────
+# ROW 5: Tonight — Aurora & Tides
+# ──────────────────────────────────────────────────────────────
+
+st.markdown("<div class='section-header'>Tonight — Aurora &amp; Tides · CN88</div>", unsafe_allow_html=True)
+
+col_aurora, col_tides = st.columns([1, 1])
+
+# ── Aurora likelihood ──────────────────────────────────────────
+with col_aurora:
+    # Moon phase (pure math, no library)
+    _moon_ref = datetime(2000, 1, 6, 18, 14, tzinfo=timezone.utc)
+    _moon_days = (utc_now - _moon_ref).total_seconds() / 86400
+    _moon_phase = (_moon_days % 29.530588853) / 29.530588853
+    _moon_illum = round((1 - math.cos(2 * math.pi * _moon_phase)) / 2 * 100)
+    _moon_names = ["New", "Waxing Crescent", "First Quarter", "Waxing Gibbous",
+                   "Full", "Waning Gibbous", "Last Quarter", "Waning Crescent"]
+    _moon_name  = _moon_names[min(7, int(_moon_phase * 8))]
+
+    # Aurora likelihood from Kp at ~48°N (CN88)
+    _kp = kp_val or 0
+    if _kp >= 7:
+        _aur_label, _aur_color = "Good", "#00e676"
+    elif _kp >= 6:
+        _aur_label, _aur_color = "Possible", "#69f0ae"
+    elif _kp >= 5:
+        _aur_label, _aur_color = "Low", "#ffc107"
+    elif _kp >= 4:
+        _aur_label, _aur_color = "Very low", "#ff7043"
+    else:
+        _aur_label, _aur_color = "Unlikely", P["text_dim"]
+
+    # Moon impact on viewing
+    if _moon_illum > 75:
+        _moon_note = f"{_moon_illum}% — bright, reduces visibility"
+        _moon_col  = "#ff7043"
+    elif _moon_illum > 40:
+        _moon_note = f"{_moon_illum}% — moderate impact"
+        _moon_col  = "#ffc107"
+    else:
+        _moon_note = f"{_moon_illum}% — minimal impact"
+        _moon_col  = "#69f0ae"
+
+    # Sky conditions
+    if sky_data:
+        _cloud = sky_data["avg_cloud_pct"]
+        _precip = sky_data["max_precip_pct"]
+        if _cloud > 70:
+            _sky_label, _sky_col = f"Overcast ({_cloud}%)", "#ef5350"
+        elif _cloud > 40:
+            _sky_label, _sky_col = f"Partly cloudy ({_cloud}%)", "#ffc107"
+        else:
+            _sky_label, _sky_col = f"Mostly clear ({_cloud}%)", "#00e676"
+        if _precip > 30:
+            _sky_label += f" · rain {_precip}%"
+    else:
+        _sky_label, _sky_col = "Unknown", P["text_dim"]
+
+    st.html(f"""
+<div style="font-family:Space Mono,monospace;font-size:12px;color:{P['text']};
+  background:{P['card_bg']};border:1px solid {P['border']};border-radius:6px;padding:14px 16px;">
+  <div style="font-size:9px;letter-spacing:.12em;color:{P['accent']};margin-bottom:8px">AURORA TONIGHT</div>
+  <div style="font-size:20px;font-weight:700;color:{_aur_color};margin-bottom:10px">
+    {_aur_label} <span style="font-size:12px;color:{P['text_dim']}">Kp {fmt(kp_val,1)}</span>
+  </div>
+  <div style="display:grid;grid-template-columns:auto 1fr;gap:4px 10px;font-size:11px;line-height:1.7">
+    <span style="color:{P['text_dim']}">Moon</span>
+    <span><span style="color:{_moon_col}">{_moon_name}</span>
+      <span style="color:{P['text_faint']};margin-left:6px">{_moon_note}</span></span>
+    <span style="color:{P['text_dim']}">Sky</span>
+    <span style="color:{_sky_col}">{_sky_label}</span>
+  </div>
+  <div style="font-size:9px;color:{P['text_faint']};margin-top:8px">Kp ≥ 5 needed for CN88 · Kp ≥ 6 reliable</div>
+</div>
+""")
+
+# ── Tides ─────────────────────────────────────────────────────
+with col_tides:
+    # Filter to upcoming tides only
+    _now_str = utc_now.strftime("%Y-%m-%d %H:%M")  # NOAA times are local but close enough for filtering
+    _upcoming = [t for t in tides_data if t["time"] > _now_str][:4]
+
+    _tide_rows = ""
+    for _t in _upcoming:
+        _type_label = "High" if _t["type"] == "H" else "Low "
+        _type_color = "#3a8fbf" if _t["type"] == "H" else P["text_dim"]
+        _ht = f"{_t['height_ft']:+.1f} ft"
+        _time_str = _t["time"][11:16]  # HH:MM local
+        _tide_rows += f"""
+    <tr style="border-bottom:1px solid {P['border']}">
+      <td style="padding:5px 8px;color:{_type_color};font-weight:700">{_type_label}</td>
+      <td style="padding:5px 8px;color:{P['text']}">{_time_str}</td>
+      <td style="padding:5px 8px;color:{P['text_dim']};text-align:right">{_ht}</td>
+    </tr>"""
+
+    st.html(f"""
+<div style="font-family:Space Mono,monospace;font-size:12px;color:{P['text']};
+  background:{P['card_bg']};border:1px solid {P['border']};border-radius:6px;padding:14px 16px;">
+  <div style="font-size:9px;letter-spacing:.12em;color:{P['accent']};margin-bottom:8px">
+    TIDES · PORT TOWNSEND
+    <span style="color:{P['text_faint']};margin-left:8px">local time</span>
+  </div>
+  <table style="width:100%;border-collapse:collapse">
+    {_tide_rows if _tide_rows else f'<tr><td style="color:{P["text_dim"]}">No data</td></tr>'}
+  </table>
+</div>
+""")
+
+# ── Footer ────────────────────────────────────────────────────
 # ──────────────────────────────────────────────────────────────
 # Footer
 # ──────────────────────────────────────────────────────────────
@@ -838,7 +957,7 @@ st.markdown("---")
 st.markdown(
     f"<div style='font-size:10px; color:{P['text_faint']}; font-family: Space Mono, monospace;'>"
     f"AK6MJ · Freeland WA CN88 · HF Dashboard · "
-    f"GIRO DIDBase (CC-BY-NC-SA 4.0) · NOAA SWPC · IF843 −40 min solar offset · "
+    f"GIRO DIDBase (CC-BY-NC-SA 4.0) · NOAA SWPC · NOAA Tides · Open-Meteo · IF843 −40 min solar offset · "
     f"Generated {utc_now.strftime('%Y-%m-%dT%H:%MZ')}"
     f"</div>",
     unsafe_allow_html=True,

@@ -498,6 +498,91 @@ def fetch_xray() -> Optional[dict]:
     return _noaa_cache_get("noaa_xray", max_age_sec=86400)
 
 
+def fetch_tides(station_id: str = "9444090") -> list[dict]:
+    """Next 24h high/low tide predictions from NOAA (Port Townsend default).
+    Cached 6 hours — predictions are stable day-to-day."""
+    cache_key = f"noaa_tides_{station_id}"
+    cached = _noaa_cache_get(cache_key, max_age_sec=21600)
+    if cached is not None:
+        return cached
+    from datetime import date
+    today = date.today()
+    tomorrow = today + timedelta(days=1)
+    try:
+        r = requests.get(
+            "https://api.tidesandcurrents.noaa.gov/api/prod/datagetter",
+            params={
+                "begin_date":  today.strftime("%Y%m%d"),
+                "end_date":    tomorrow.strftime("%Y%m%d"),
+                "station":     station_id,
+                "product":     "predictions",
+                "datum":       "MLLW",
+                "time_zone":   "lst_ldt",
+                "interval":    "hilo",
+                "units":       "english",
+                "application": "hf_dashboard_ak6mj",
+                "format":      "json",
+            },
+            timeout=TIMEOUT,
+        )
+        r.raise_for_status()
+        predictions = r.json().get("predictions", [])
+        result = [
+            {"time": p["t"], "height_ft": float(p["v"]), "type": p["type"]}
+            for p in predictions
+        ]
+        _noaa_cache_put(cache_key, result)
+        return result
+    except Exception as e:
+        log.warning("Tides fetch failed: %s", e)
+    return _noaa_cache_get(cache_key, max_age_sec=86400) or []
+
+
+def fetch_sky_tonight(lat: float = 48.0, lon: float = -122.5) -> Optional[dict]:
+    """Evening cloud cover % from Open-Meteo for the viewing window (20:00-03:00 local).
+    Cached 1 hour."""
+    cached = _noaa_cache_get("sky_tonight", max_age_sec=3600)
+    if cached is not None:
+        return cached
+    try:
+        r = requests.get(
+            "https://api.open-meteo.com/v1/forecast",
+            params={
+                "latitude":     lat,
+                "longitude":    lon,
+                "hourly":       "cloud_cover,precipitation_probability",
+                "timezone":     "America/Los_Angeles",
+                "forecast_days": 2,
+            },
+            timeout=TIMEOUT,
+        )
+        r.raise_for_status()
+        d = r.json()
+        times  = d["hourly"]["time"]
+        clouds = d["hourly"]["cloud_cover"]
+        precip = d["hourly"]["precipitation_probability"]
+        # Collect this evening's hours: 20:00 tonight through 03:00 tomorrow
+        evening = []
+        for t, c, p in zip(times, clouds, precip):
+            h = int(t[11:13])
+            if h >= 20 or h <= 3:
+                evening.append({"time": t, "cloud_pct": c, "precip_pct": p})
+        if not evening:
+            return None
+        avg_cloud = round(sum(e["cloud_pct"] for e in evening) / len(evening))
+        max_precip = max(e["precip_pct"] for e in evening)
+        result = {
+            "avg_cloud_pct": avg_cloud,
+            "max_precip_pct": max_precip,
+            "hours": evening,
+        }
+        _noaa_cache_put("sky_tonight", result)
+        return result
+    except Exception as e:
+        log.warning("Sky conditions fetch failed: %s", e)
+    return _noaa_cache_get("sky_tonight", max_age_sec=86400)
+
+
 def _xray_class(flux: float) -> str:
     if flux >= 1e-4:
         return "X"
