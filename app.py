@@ -940,7 +940,7 @@ with col_tides:
   background:{P['card_bg']};border:1px solid {P['border']};border-radius:6px;padding:14px 16px;">
   <div style="font-size:9px;letter-spacing:.12em;color:{P['accent']};margin-bottom:8px">
     TIDES · PORT TOWNSEND
-    <span style="color:{P['text_faint']};margin-left:8px">local time</span>
+    <span style="color:{P['text_faint']};margin-left:8px">local time · saltwater amplifier</span>
   </div>
   <table style="width:100%;border-collapse:collapse">
     {_tide_rows if _tide_rows else f'<tr><td style="color:{P["text_dim"]}">No data</td></tr>'}
