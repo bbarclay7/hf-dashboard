@@ -155,6 +155,18 @@ st.markdown(f"""
   .kp-mid    {{ color: #ffc107; }}
   .kp-high   {{ color: #ef5350; }}
 
+  /* Sidebar text and widgets */
+  [data-testid="stSidebar"] p,
+  [data-testid="stSidebar"] label,
+  [data-testid="stSidebar"] .stMarkdown,
+  [data-testid="stSidebar"] span {{ color: {P['text']} !important; }}
+
+  [data-testid="stSidebar"] button {{
+    background-color: {P['card_bg']} !important;
+    color: {P['text']} !important;
+    border: 1px solid {P['border']} !important;
+  }}
+
   /* Hide Streamlit chrome */
   #MainMenu, footer, header {{ visibility: hidden; }}
   .block-container {{ padding-top: 1.5rem; }}
