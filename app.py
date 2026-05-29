@@ -228,7 +228,7 @@ with st.sidebar:
     - [GIRO IonoWeb](https://giro.uml.edu) — Ionosonde (OCR)
     - [NOAA SWPC](https://www.swpc.noaa.gov) — Kp, SFI, wind, X-ray
     - [NOAA Tides](https://tidesandcurrents.noaa.gov) — Port Townsend
-    - [Open-Meteo](https://open-meteo.com) — Sky forecast
+    - [Open-Meteo](https://open-meteo.com) — Weather & sky forecast
     """)
 
     manual_refresh = st.button("🔄 Refresh Now", use_container_width=True)
