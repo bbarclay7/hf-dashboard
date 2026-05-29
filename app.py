@@ -656,7 +656,13 @@ if _best_nvis:
         unsafe_allow_html=True,
     )
 
-st.markdown("<div class='section-header'>Band Conditions — NVIS & DX · Freeland WA (CN88)</div>", unsafe_allow_html=True)
+st.markdown(
+    f"<div class='section-header'>Band Conditions — NVIS &amp; DX · Freeland WA (CN88)"
+    f"<a href='https://hf.dxview.org/perspective/CN88RA' target='_blank' "
+    f"style='float:right;font-size:10px;color:{P[\"accent\"]};letter-spacing:.05em;"
+    f"text-decoration:none;font-weight:normal'>DX View ↗</a></div>",
+    unsafe_allow_html=True,
+)
 
 col_bands, col_chart = st.columns([1, 2])
 
