@@ -625,16 +625,16 @@ with c7:
         palette=P,
     ), unsafe_allow_html=True)
 
-_xray_colors = {"A": "#607d8b", "B": "#00acc1", "C": "#ffc107", "M": "#ff7043", "X": "#ef5350"}
+_xray_colors = {"A": "#00e676", "B": "#00e676", "C": "#ffc107", "M": "#ff7043", "X": "#ef5350"}
 _xr_vc = _xray_colors.get(xray_cls, P["text_bright"]) if xray_cls else P["text_bright"]
 with c8:
     st.markdown(_tos_gauge(
         pct=_xr_pct, value_str=xray_cls or "—",
         unit_str=f"{xray_flux:.1e} W/m²" if xray_flux else "",
         label_str="X-RAY FLUX",
-        segments=[(0, 40, "#607d8b"), (40, 60, "#00acc1"), (60, 80, "#ffc107"), (80, 100, "#ef5350")],
+        segments=[(0, 60, "#00e676"), (60, 80, "#ffc107"), (80, 100, "#ef5350")],
         tick_labels=[(0, "A"), (40, "B"), (60, "C"), (80, "M"), (100, "X")],
-        tooltip="GOES X-ray flux (log scale). A/B: background. C: minor absorption. M: moderate, 1-2 grade penalty. X: major, possible HF blackout on daytime side.",
+        tooltip="GOES X-ray flux (log scale). A/B: background, no HF effect. C: minor absorption. M: moderate, 1-2 grade penalty. X: major, possible HF blackout on daytime side.",
         value_color=_xr_vc,
         palette=P,
     ), unsafe_allow_html=True)
