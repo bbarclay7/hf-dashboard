@@ -23,6 +23,7 @@ from fetch import (
     fetch_xray,
     fetch_tides,
     fetch_sky_tonight,
+    fetch_weather_forecast,
     estimate_band_conditions,
     BANDS,
 )
@@ -256,7 +257,7 @@ def load_space_weather():
 
 @st.cache_data(ttl=3600)  # 1-hour cache
 def load_tonight():
-    return fetch_tides(), fetch_sky_tonight()
+    return fetch_tides(), fetch_sky_tonight(), fetch_weather_forecast()
 
 
 if manual_refresh:
@@ -266,7 +267,7 @@ if manual_refresh:
 with st.spinner("Fetching data..."):
     latest_iono, iono_history = load_ionosonde(station, hours_history)
     kp_data, sfi_data, wind_data, xray_data = load_space_weather()
-    tides_data, sky_data = load_tonight()
+    tides_data, sky_data, wx_data = load_tonight()
 
 utc_now = datetime.now(timezone.utc)
 
@@ -278,6 +279,87 @@ if latest_iono and latest_iono.get("_cached"):
         st.warning(f"⚠️ Ionosonde data is {_age_str} old — pipeline may be stalled.")
 elif not latest_iono:
     st.warning("⚠️ No ionosonde data available.")
+
+
+# ──────────────────────────────────────────────────────────────
+# Propagation summary — plain-English for the operator
+# ──────────────────────────────────────────────────────────────
+
+def propagation_summary(fof2, mufd, kp, sfi, bz, xray_cls, utc_now):
+    """Return a 2-3 sentence operator-facing summary of current conditions."""
+    sentences = []
+
+    # ── NVIS / regional sentence ──────────────────────────────
+    # CN88 local solar noon ≈ 20:30 UTC; dawn ≈ 13:30 UTC, dusk ≈ 03:30 UTC
+    local_h = (utc_now.hour + (utc_now.minute / 60) - 7) % 24   # PDT offset
+    is_day = 6 < local_h < 20
+
+    if fof2 is not None:
+        if fof2 >= 8.0:
+            nvis = "40m, 60m, and even 30m are wide open for NVIS"
+        elif fof2 >= 6.5:
+            nvis = "40m and 60m are solid for NVIS regional work"
+        elif fof2 >= 5.0:
+            nvis = "60m is the pick for NVIS; 40m is workable but marginal"
+        elif fof2 >= 3.5:
+            nvis = "80m is your best NVIS band; 40m is losing its ceiling"
+        elif fof2 >= 2.0:
+            nvis = "NVIS is limited to 80m — F2 layer is thin"
+        else:
+            nvis = "F2 layer has collapsed — NVIS unreliable on all bands"
+
+        if not is_day:
+            nvis += "; 80m strengthening as the layer thins overnight"
+
+        sentences.append(nvis + ".")
+
+    # ── DX / skip sentence ────────────────────────────────────
+    if mufd is not None:
+        if mufd >= 28:
+            dx = "The DX ceiling is up to 10m — wide open for coast-to-coast and Pacific DX"
+        elif mufd >= 21:
+            dx = f"15m and 17m look good for DX; 20m is reliable coast-to-coast"
+        elif mufd >= 18:
+            dx = f"17m is worth a try for Pacific and domestic DX; 20m is the workhorse"
+        elif mufd >= 14:
+            dx = f"20m is the DX ceiling — solid for coast-to-coast, Pacific paths possible"
+        elif mufd >= 10:
+            dx = f"DX is limited to 30m and 40m — upper bands are closed"
+        else:
+            dx = f"Skip is very short; DX prospects are poor on all bands"
+        sentences.append(dx + ".")
+
+    # ── Geomagnetic / alerts sentence ────────────────────────
+    alerts = []
+
+    if kp is not None:
+        if kp >= 7:
+            alerts.append(f"Kp {kp:.0f} storm is severely disrupting HF above 14 MHz from CN88 — stick to 40m and 80m")
+        elif kp >= 5:
+            alerts.append(f"Kp {kp:.0f} storm is degrading bands above 14 MHz from CN88's latitude")
+        elif kp >= 3:
+            alerts.append(f"Kp {kp:.1f} — slight geomagnetic unsettling, watch for absorption on higher bands")
+
+    if bz is not None and bz < -5:
+        if bz < -15:
+            alerts.append(f"Bz {bz:.0f} nT — major storm coupling under way, Kp rising fast")
+        elif bz < -10:
+            alerts.append(f"Bz {bz:.0f} nT southward — expect Kp to climb over the next 1–2 hours")
+        else:
+            alerts.append(f"Bz {bz:.0f} nT — watch for Kp to tick up")
+
+    if xray_cls in ("M", "X"):
+        alerts.append(f"{xray_cls}-class flare causing D-region absorption on the sunlit side; night-side paths unaffected")
+
+    if sfi is not None and sfi < 80 and mufd is not None and mufd < 14:
+        alerts.append(f"solar flux is low ({sfi:.0f} sfu) — don't expect much from 17m and above today")
+
+    if alerts:
+        sentences.append(" · ".join(a[0].upper() + a[1:] for a in alerts) + ".")
+    elif fof2 is not None and kp is not None and kp < 3:
+        sentences.append("Conditions look stable — nothing to watch right now.")
+
+    return " ".join(sentences)
 
 
 # ──────────────────────────────────────────────────────────────
@@ -325,7 +407,6 @@ with col_time:
         )
 
 st.markdown("---")
-
 
 # ──────────────────────────────────────────────────────────────
 # ROW 1: Key metrics
@@ -873,6 +954,34 @@ if kp_data and kp_data.get("history"):
 else:
     st.info("Kp data unavailable.")
 
+
+# ──────────────────────────────────────────────────────────────
+# ──────────────────────────────────────────────────────────────
+# Propagation + weather summary
+# ──────────────────────────────────────────────────────────────
+
+st.markdown("<div class='section-header'>Summary</div>", unsafe_allow_html=True)
+
+_summary = propagation_summary(fof2, mufd, kp_val, sfi_val, wind_bz,
+                               xray_data.get("class") if xray_data else None,
+                               utc_now)
+
+_wx_blurb = ""
+if wx_data:
+    _wx_blurb = (f"{wx_data['label']}. "
+                 f"Wind {wx_data['max_wind']} mph, gusts to {wx_data['max_gust']} mph "
+                 f"over the next 24 h.")
+    if wx_data['max_precip'] > 30:
+        _wx_blurb += f" Precipitation likely ({wx_data['max_precip']}%)."
+
+_full_summary = " ".join(s for s in [_summary, _wx_blurb] if s)
+if _full_summary:
+    st.markdown(
+        f"<div style='font-family:Space Mono,monospace;font-size:12px;line-height:1.75;"
+        f"color:{P['text']};background:{P['card_bg']};border:1px solid {P['border']};"
+        f"border-radius:6px;padding:12px 16px'>{_full_summary}</div>",
+        unsafe_allow_html=True,
+    )
 
 # ──────────────────────────────────────────────────────────────
 # ROW 5: Tonight — Aurora & Tides

@@ -583,6 +583,74 @@ def fetch_sky_tonight(lat: float = 48.0, lon: float = -122.5) -> Optional[dict]:
     return _noaa_cache_get("sky_tonight", max_age_sec=86400)
 
 
+def fetch_weather_forecast(lat: float = 48.0, lon: float = -122.5) -> Optional[dict]:
+    """Next-24h weather summary from Open-Meteo for the QTH. Cached 1 hour.
+    Returns wind speed (mph), gusts (mph), precip probability, and a short text label."""
+    cached = _noaa_cache_get("wx_forecast", max_age_sec=3600)
+    if cached is not None:
+        return cached
+    try:
+        r = requests.get(
+            "https://api.open-meteo.com/v1/forecast",
+            params={
+                "latitude":          lat,
+                "longitude":         lon,
+                "hourly":            "wind_speed_10m,wind_gusts_10m,precipitation_probability,weathercode",
+                "wind_speed_unit":   "mph",
+                "timezone":          "America/Los_Angeles",
+                "forecast_days":     2,
+            },
+            timeout=TIMEOUT,
+        )
+        r.raise_for_status()
+        d = r.json()
+        times  = d["hourly"]["time"]
+        speeds = d["hourly"]["wind_speed_10m"]
+        gusts  = d["hourly"]["wind_gusts_10m"]
+        precip = d["hourly"]["precipitation_probability"]
+        codes  = d["hourly"]["weathercode"]
+
+        # Next 24 hours from now
+        from datetime import date
+        now_str = date.today().strftime("%Y-%m-%d")
+        next24 = [(t, s, g, p, c) for t, s, g, p, c in zip(times, speeds, gusts, precip, codes)
+                  if t >= now_str][:24]
+
+        if not next24:
+            return None
+
+        max_gust   = max(g for _, _, g, _, _ in next24)
+        max_wind   = max(s for _, s, _, _, _ in next24)
+        max_precip = max(p for _, _, _, p, _ in next24)
+
+        # WMO weather code → short label (simplified)
+        _wx_labels = {
+            0: "Clear", 1: "Mostly clear", 2: "Partly cloudy", 3: "Overcast",
+            45: "Foggy", 48: "Icy fog",
+            51: "Light drizzle", 53: "Drizzle", 55: "Heavy drizzle",
+            61: "Light rain", 63: "Rain", 65: "Heavy rain",
+            71: "Light snow", 73: "Snow", 75: "Heavy snow",
+            80: "Showers", 81: "Showers", 82: "Heavy showers",
+            95: "Thunderstorm", 96: "Thunderstorm", 99: "Thunderstorm",
+        }
+        # dominant code = most common over next 12h
+        day_codes = [c for _, _, _, _, c in next24[:12]]
+        dominant  = max(set(day_codes), key=day_codes.count)
+        wx_label  = _wx_labels.get(dominant, "Variable")
+
+        result = {
+            "label":       wx_label,
+            "max_wind":    round(max_wind),
+            "max_gust":    round(max_gust),
+            "max_precip":  max_precip,
+        }
+        _noaa_cache_put("wx_forecast", result)
+        return result
+    except Exception as e:
+        log.warning("Weather forecast fetch failed: %s", e)
+    return _noaa_cache_get("wx_forecast", max_age_sec=86400)
+
+
 def _xray_class(flux: float) -> str:
     if flux >= 1e-4:
         return "X"
