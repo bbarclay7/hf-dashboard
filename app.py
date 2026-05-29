@@ -633,7 +633,7 @@ with c8:
         unit_str=f"{xray_flux:.1e} W/m²" if xray_flux else "",
         label_str="X-RAY FLUX",
         segments=[(0, 60, "#00e676"), (60, 80, "#ffc107"), (80, 100, "#ef5350")],
-        tick_labels=[(0, "A"), (40, "B"), (60, "C"), (80, "M"), (100, "X")],
+        tick_labels=[(30, "A"), (50, "B"), (70, "C"), (90, "M")],
         tooltip="GOES X-ray flux (log scale). A/B: background, no HF effect. C: minor absorption. M: moderate, 1-2 grade penalty. X: major, possible HF blackout on daytime side.",
         value_color=_xr_vc,
         palette=P,
