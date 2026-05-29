@@ -213,6 +213,16 @@ with st.sidebar:
 
     st.markdown("---")
     st.markdown("""
+    **Useful Links**
+    - [DX View CN88](https://hf.dxview.org/perspective/CN88RA) — Propagation map
+    - [PSK Reporter](https://www.pskreporter.info/pskmap.html) — Live spots
+    - [DX Maps](https://www.dxmaps.com) — Cluster map
+    - [NOAA Space Wx](https://www.swpc.noaa.gov) — Alerts & forecasts
+    - [SpaceWeatherLive](https://www.spaceweatherlive.com) — Aurora alerts
+    """)
+
+    st.markdown("---")
+    st.markdown("""
     **Data Sources**
     - [GIRO IonoWeb](https://giro.uml.edu) — Ionosonde (OCR)
     - [NOAA SWPC](https://www.swpc.noaa.gov) — Kp, SFI, wind, X-ray
@@ -656,14 +666,7 @@ if _best_nvis:
         unsafe_allow_html=True,
     )
 
-_ac = P['accent']
-st.markdown(
-    f"<div class='section-header'>Band Conditions — NVIS &amp; DX · Freeland WA (CN88)"
-    f"<a href='https://hf.dxview.org/perspective/CN88RA' target='_blank' "
-    f"style='float:right;font-size:10px;color:{_ac};letter-spacing:.05em;"
-    f"text-decoration:none;font-weight:normal'>DX View ↗</a></div>",
-    unsafe_allow_html=True,
-)
+st.markdown("<div class='section-header'>Band Conditions — NVIS &amp; DX · Freeland WA (CN88)</div>", unsafe_allow_html=True)
 
 col_bands, col_chart = st.columns([1, 2])
 
