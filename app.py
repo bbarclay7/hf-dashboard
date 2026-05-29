@@ -407,8 +407,7 @@ with col_time:
         )
 
 st.markdown("---")
-_summary_slot   = st.empty()   # filled after all values are known
-_best_nvis_slot = st.empty()   # filled after bands are computed
+_summary_slot = st.empty()   # filled after all values are known
 
 # ──────────────────────────────────────────────────────────────
 # ROW 1: Key metrics
@@ -758,21 +757,6 @@ bands = estimate_band_conditions(fof2, mufd, kp_val, sfi_val, xray_class=xray_da
 _best_nvis = next(
     (b for b in reversed(bands) if b["nvis_label"] in ("Excellent", "Good")), None
 )
-if _best_nvis:
-    _qp_col  = _best_nvis["nvis_color"]
-    _kp_note = (f" &nbsp;·&nbsp; Kp {kp_val:.1f} — watch absorption" if kp_val and kp_val >= 3 else "")
-    _best_nvis_slot.markdown(
-        f'<div style="font-family:Space Mono,monospace; background:{P["best_nvis_bg"]}; '
-        f'border-left:3px solid {_qp_col}; border-radius:4px; '
-        f'padding:6px 14px; margin-bottom:4px; font-size:12px;">'
-        f'<span style="color:{P["accent"]}; font-size:9px; letter-spacing:.1em">Best NVIS / VARA HF</span>'
-        f'&nbsp;&nbsp;'
-        f'<span style="color:{_qp_col}; font-size:18px; font-weight:700">{_best_nvis["band"]}</span>'
-        f'<span style="color:{P["text"]}; margin-left:8px">{_best_nvis["nvis_label"]}</span>'
-        f'<span style="color:{P["text_dim"]}; margin-left:8px; font-size:10px">NVIS ≈ 50–500 km{_kp_note}</span>'
-        f'</div>',
-        unsafe_allow_html=True,
-    )
 
 st.markdown("<div class='section-header'>Band Conditions — NVIS &amp; DX · Freeland WA (CN88)</div>", unsafe_allow_html=True)
 
@@ -979,7 +963,9 @@ _full_summary = " ".join(s for s in [_summary, _wx_blurb] if s)
 if _full_summary:
     _summary_slot.markdown(
         f"<div style='font-family:Space Mono,monospace;font-size:11px;line-height:1.65;"
-        f"color:{P['text']};margin-bottom:2px'>{_full_summary}</div>",
+        f"color:{P['text']};margin-bottom:2px'>"
+        f"<span style='font-size:9px;letter-spacing:.15em;color:{P['accent']}'>CONDITIONS NOW</span>"
+        f"&nbsp;&nbsp;{_full_summary}</div>",
         unsafe_allow_html=True,
     )
 
