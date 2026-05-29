@@ -547,24 +547,41 @@ st.html(f"""
 <summary style="cursor:pointer;color:{P['accent']};font-size:11px;
   letter-spacing:.05em;padding:2px 0;user-select:none">ⓘ Space weather parameters explained</summary>
 <div style="margin-top:8px">
-<p><b>Kp</b> — Planetary K-index (0–9 scale, 3-hour intervals). Geomagnetic disturbance level.
-<br>0–2: quiet — best HF &nbsp;|&nbsp; 3–4: unsettled &nbsp;|&nbsp; 5+: storm, severe disruption at CN88 latitude.
-<br>Penalizes band grades here, extra penalty above 14 MHz.
+<p><b>Kp</b> — Planetary K-index (0–9, updated every 3 hours). Measures global geomagnetic disturbance.
+Driven by solar wind pressure and Bz coupling; watch Kp when Bz goes negative.
+<br><b>0–2</b>: quiet — best HF conditions, low absorption on all bands.
+<br><b>3–4</b>: unsettled — slight HF degradation, minor polar-path absorption.
+<br><b>5 (G1 storm)</b>: high-latitude HF disruption. CN88 is at ~48°N — we start feeling this.
+<br><b>6–7 (G2–G3)</b>: significant absorption above 14 MHz from CN88, NVIS bands still usable.
+<br><b>8–9 (G4–G5)</b>: severe — HF largely unusable at CN88, possible radio blackout on all bands.
+Kp lags Bz by 1–3 hrs, so a strongly negative Bz now means Kp rise is coming.
 <a href="https://www.swpc.noaa.gov/products/planetary-k-index" target="_blank" style="color:{P['accent']}">NOAA Kp</a></p>
-<p><b>SFI</b> — Solar Flux Index (F10.7 cm). Primary long-term driver of foF2 and MUF.
-<br>~70: solar minimum &nbsp;|&nbsp; 150+: solar maximum. Each +10 sfu ≈ +0.5–1 MHz to foF2.
+<p><b>SFI</b> — Solar Flux Index (F10.7 cm radio emission, daily). Best long-term predictor of foF2 and MUF.
+Solar UV ionizes the F2 layer; F10.7 tracks the UV output day-to-day without needing satellite UV sensors.
+<br><b>65–80</b>: solar minimum — low foF2, MUF depressed, upper bands (17m+) often dead.
+<br><b>80–120</b>: moderate — 20m reliable, 15m/17m open during daylight.
+<br><b>120–160</b>: good — 15m/12m productive, 10m opens on good paths.
+<br><b>160+</b>: solar maximum — 10m wide open, 6m F2 possible, DX on all bands.
+Each +10 sfu adds roughly +0.5–1 MHz to foF2 and MUF. SFI doesn't cause day-to-day swings —
+for that watch foF2 directly. SFI sets the ceiling; Kp and time of day determine where you are under it.
 <a href="https://www.swpc.noaa.gov/phenomena/f107-cm-radio-emissions" target="_blank" style="color:{P['accent']}">NOAA F10.7</a></p>
 <p><b>Bz</b> — IMF Z-component (DSCOVR satellite, ~1 hr upstream of Earth).
 Earth's magnetic field points northward at the magnetopause. When Bz is <b>southward (negative)</b>,
 it opposes Earth's field and the two fields reconnect — opening a door for solar wind energy to pour
 into the magnetosphere. This drives the ring current, heats the ionosphere, and raises Kp.
-<b>Bz &gt; −5 nT</b>: background, ignore.
-<b>−5 to −10 nT sustained</b>: watch — Kp likely rising over next 1–3 hrs, HF grades will drop.
-<b>&lt; −10 nT</b>: storm developing — absorption on polar paths (CN88 is vulnerable above 14 MHz),
-possible HF blackout at high latitudes.
-Positive Bz = northward = field lines don't connect = no storm regardless of magnitude.</p>
-<p><b>X-ray</b> — GOES flare flux. Causes sudden D-region absorption on the sunlit side.
-<br>A/B: none &nbsp;|&nbsp; C: minor &nbsp;|&nbsp; M: 1–2 grade penalty &nbsp;|&nbsp; X: possible blackout.
+<br><b>Bz &gt; −5 nT</b>: background fluctuation, ignore.
+<br><b>−5 to −10 nT sustained</b>: watch — Kp likely rising over next 1–3 hrs, HF grades will drop.
+<br><b>&lt; −10 nT</b>: storm developing — absorption on polar paths (CN88 vulnerable above 14 MHz).
+<br><b>&lt; −20 nT</b>: major storm — HF largely unusable at high latitudes.
+Positive Bz = northward = field lines don't reconnect = no storm regardless of magnitude.</p>
+<p><b>X-ray</b> — GOES X-ray flux from solar flares. Causes <em>sudden ionospheric disturbance</em> (SID):
+intense X-rays over-ionize the D-region on the sunlit hemisphere, absorbing HF signals in minutes.
+Unlike geomagnetic storms, SIDs strike instantly and affect the dayside only — night side is fine.
+<br><b>A/B</b>: background — no HF effect.
+<br><b>C</b>: minor — slight absorption on 10–15 MHz paths crossing the dayside, usually ignorable.
+<br><b>M</b>: moderate — 1–2 grade penalty on dayside bands, 10m–20m noticeably degraded.
+<br><b>X</b>: major — possible HF blackout on dayside. Lasts minutes to an hour, then clears.
+Night-side paths and NVIS on low bands (80m/40m) are mostly unaffected by flares.
 <a href="https://www.swpc.noaa.gov/phenomena/solar-flares-radio-blackouts" target="_blank" style="color:{P['accent']}">NOAA flares</a></p>
 </div></details>
 """)
