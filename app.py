@@ -385,6 +385,23 @@ def kp_color_class(kp):
     return "kp-low"
 
 
+# Grade colors need darkening on light backgrounds for legibility
+_GRADE_REMAP_LIGHT = {
+    "#00e676": "#1a7a40",   # Excellent — bright green → dark green
+    "#69f0ae": "#1e6b3a",   # Good      — light green → medium dark green
+    "#ffc107": "#9a6800",   # Fair      — yellow      → dark amber
+    "#ff7043": "#c03d15",   # Poor      — orange      → dark orange
+    "#ef5350": "#b71c1c",   # Closed    — red         → dark red
+    "#607d8b": "#455a64",   # N/A       — blue-gray   → darker
+}
+
+def _gc(color: str) -> str:
+    """Return theme-adjusted grade color."""
+    if theme == "light":
+        return _GRADE_REMAP_LIGHT.get(color, color)
+    return color
+
+
 # ──────────────────────────────────────────────────────────────
 # HEADER
 # ──────────────────────────────────────────────────────────────
@@ -719,9 +736,9 @@ def _freq_ruler(fof2_val, mufd_val, bands_list, palette=None):
         bx = xp(fcenter)
         bi = band_lkp.get(bname, {})
         if fof2_val and fcenter <= fof2_val:
-            tc = bi.get("nvis_color", Q["text_dim"])
+            tc = _gc(bi.get("nvis_color", Q["text_dim"]))
         elif mufd_val and fcenter <= mufd_val:
-            tc = bi.get("dx_color", Q["text_dim"])
+            tc = _gc(bi.get("dx_color", Q["text_dim"]))
         else:
             tc = Q["border"]
         label = bname.replace("m", "")
@@ -779,8 +796,8 @@ with col_bands:
     </tr>
     """
     for b in bands:
-        nvis_color = b["nvis_color"]
-        dx_color   = b["dx_color"]
+        nvis_color = _gc(b["nvis_color"])
+        dx_color   = _gc(b["dx_color"])
         nvis_lbl   = b["nvis_label"]
         dx_lbl     = b["dx_label"]
         freq       = b["freq_mhz"]
@@ -818,11 +835,11 @@ with col_bands:
     # Legend
     band_md += f"""
     <div style='margin-top:10px; font-size:10px; color:{P['text_faint']}; line-height:1.8'>
-      <span style='color:#00e676'>■</span> Excellent &nbsp;
-      <span style='color:#69f0ae'>■</span> Good &nbsp;
-      <span style='color:#ffc107'>■</span> Fair<br>
-      <span style='color:#ff7043'>■</span> Poor &nbsp;
-      <span style='color:#ef5350'>■</span> Closed &nbsp;
+      <span style='color:{_gc("#00e676")}'>■</span> Excellent &nbsp;
+      <span style='color:{_gc("#69f0ae")}'>■</span> Good &nbsp;
+      <span style='color:{_gc("#ffc107")}'>■</span> Fair<br>
+      <span style='color:{_gc("#ff7043")}'>■</span> Poor &nbsp;
+      <span style='color:{_gc("#ef5350")}'>■</span> Closed &nbsp;
       <span style='color:#607d8b'>■</span> N/A
     </div>
     <div style='margin-top:6px; font-size:9px; color:{P['text_faint']}'>
