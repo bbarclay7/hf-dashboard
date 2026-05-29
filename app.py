@@ -201,13 +201,6 @@ with st.sidebar:
         st.query_params["theme"] = _other_theme
         st.rerun()
 
-    station = st.selectbox(
-        "Ionosonde Station",
-        options=["IF843", "BC840", "MHJ45", "EG931", "GA762", "PA836"],
-        index=0,
-        help="URSI station code. IF843 = Idaho National Lab (nearest to CM58)"
-    )
-
     refresh_interval = st.select_slider(
         "Auto-refresh (sec)",
         options=[0, 60, 120, 300, 600, 900],
@@ -226,6 +219,7 @@ with st.sidebar:
 
     manual_refresh = st.button("🔄 Refresh Now", use_container_width=True)
 
+station = "IF843"
 
 # ──────────────────────────────────────────────────────────────
 # Data loading with caching
