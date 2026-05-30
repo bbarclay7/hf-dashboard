@@ -320,21 +320,29 @@ def propagation_summary(fof2, mufd, kp, sfi, bz, xray_cls, utc_now, bands=None):
     elif fof2 is not None:
         sentences.append("Ionospheric data available but band grades not computed.")
 
-    # ── DX / skip sentence ────────────────────────────────────
-    if mufd is not None:
-        if mufd >= 28:
-            dx = "The DX ceiling is up to 10m — wide open for coast-to-coast and Pacific DX"
-        elif mufd >= 21:
-            dx = f"15m and 17m look good for DX; 20m is reliable coast-to-coast"
-        elif mufd >= 18:
-            dx = f"17m is worth a try for Pacific and domestic DX; 20m is the workhorse"
-        elif mufd >= 14:
-            dx = f"20m is the DX ceiling — solid for coast-to-coast, Pacific paths possible"
-        elif mufd >= 10:
-            dx = f"DX is limited to 30m and 40m — upper bands are closed"
+    # ── DX / skip sentence — derived from actual band grades ────
+    if bands:
+        dx_open = [b["band"] for b in bands if b.get("dx_grade", 0) >= 4]   # Excellent or Good
+        dx_fair  = [b["band"] for b in bands if b.get("dx_grade", 0) == 3]  # Fair
+        if dx_open:
+            top = dx_open[-1]   # highest-freq good DX band
+            if top in ("10m", "12m"):
+                dx = f"DX ceiling up to {top} — wide open for coast-to-coast and Pacific"
+            elif top in ("15m", "17m"):
+                dx = f"{top} and 20m are the DX workhorses; good for coast-to-coast and Pacific paths"
+            elif top == "20m":
+                dx = f"20m is the DX ceiling — solid for coast-to-coast, Pacific paths possible"
+            else:
+                dx = f"DX limited to {top} and below — upper bands are closed"
+        elif dx_fair:
+            top = dx_fair[-1]
+            dx = f"DX is marginal; {top} worth a try but don't expect much above that"
+        elif mufd is not None:
+            dx = "DX prospects are poor — skip zone is very short or bands are closed"
         else:
-            dx = f"Skip is very short; DX prospects are poor on all bands"
-        sentences.append(dx + ".")
+            dx = None
+        if dx:
+            sentences.append(dx + ".")
 
     # ── Geomagnetic / alerts sentence ────────────────────────
     alerts = []
