@@ -2,14 +2,17 @@
 # update_iono.sh — cron wrapper: scrape ionogram, commit updated JSON to repo.
 #
 # Crontab (every 15 min):
-#   */15 * * * * /home/bb/hf_dashboard/scripts/update_iono.sh >> /tmp/iono_update.log 2>&1
+#   */15 * * * * /path/to/hf_dashboard/scripts/update_iono.sh >> /tmp/iono_update.log 2>&1
 #
 # One-time setup:
 #   sudo apt install tesseract-ocr
-#   uvx --with Pillow --with pytesseract --with requests python3 -c "import pytesseract"
+#   curl -LsSf https://astral.sh/uv/install.sh | sh
+#   ssh-keygen -t ed25519 && cat ~/.ssh/id_ed25519.pub  # add to GitHub deploy keys
 
 set -euo pipefail
-cd "$(dirname "$0")/.."
+export PATH="$HOME/.local/bin:$PATH"
+REPO="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$REPO"
 
 echo "--- $(date -u +%Y-%m-%dT%H:%MZ) ---"
 
